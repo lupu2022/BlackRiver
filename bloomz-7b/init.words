@@ -85,6 +85,9 @@
     "alibi" @ op.build_alibi
 
     ; input variable
+    ("SUB_BATCH" @ "TOKEN_LEN" @  "HIDDEN_SIZE" @ 3   "cpu"  op.create)  "xinput_"  !   
+    ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   "cpu"  op.create)  "xmask_"   !   
+
     ("SUB_BATCH" @ "TOKEN_LEN" @  "HIDDEN_SIZE" @ 3   $DEVICE @ op.create)  "xinput"  !
     ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   $DEVICE @ op.create)  "xmask"   !
 

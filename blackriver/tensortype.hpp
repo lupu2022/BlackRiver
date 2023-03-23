@@ -258,6 +258,7 @@ public:
     virtual ComputingReturn io_load(tensor_t self, const char* fileName);
     virtual ComputingReturn io_save(tensor_t self, const char* fileName);
     virtual ComputingReturn io_dump(tensor_t self);
+    virtual ComputingReturn io_mpi_recv(tensor_t self, int source);
 private:
     // basic info about tensor
     ShapeType shape_;

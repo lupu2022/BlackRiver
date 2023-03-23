@@ -114,6 +114,12 @@ ComputingReturn TensorType::io_dump(tensor_t self) {
     op_check(ret, "dump");
 }
 
+ComputingReturn TensorType::io_mpi_recv(tensor_t self, int source) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_mpi_recv(self, source);
+    op_check(ret, "mpi_recv");
+}
+
 TensorType::~TensorType() {
     if ( impl_index() == ImplType::CUDA_FLOAT ) {
         cuda_float_t* tensor = std::get<CUDA_FLOAT>(impl_);

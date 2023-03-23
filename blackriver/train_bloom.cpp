@@ -4,6 +4,9 @@
 #include "context.hpp"
 #include "dag.hpp"
 #include "nn.hpp"
+#include "tensortype.hpp"
+#include "cpu_tensor.hpp"
+#include "cuda_tensor.hpp"
 
 inline std::string fileToString(const char* filename) {
     std::ifstream t(filename);
@@ -23,6 +26,10 @@ int main(int argc, char* argv[] ) {
     br::CollectiveContext::boot(argc, argv, 2);
 
     if ( br::CollectiveContext::mpi_rank == 0) {
+        std::vector<float> xinput;
+        br::load_data("model/xinput.msg", xinput);
+
+        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
 
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
@@ -55,11 +62,16 @@ int main(int argc, char* argv[] ) {
             delete init_wd;
         }
 
+        env->change(0);
+        br::tensor_t xinput = env->hash().find_tensor("xinput");
+        br::tensor_t xinput_ = env->hash().find_tensor("xinput_");
+        xinput_->io_mpi_recv(xinput_, 0);
+
+        xinput->op_copy(xinput, xinput_);
+
         {
             std::string train_code = fileToString("model/train.words");
-            env->change(0);
             env->execute(train_code);
-            env->execute("'xinput' @ 'model/xinput.msg' io.load");
             env->execute("op.sync");
             std::cout << "Executing forward..." << std::endl;
             env->execute("forward");

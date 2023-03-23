@@ -203,6 +203,18 @@ namespace io {
     };
 }
 
+namespace mpi {
+    struct Recv : public NativeWord {
+        virtual void run(Stack& stack) {
+            int source = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_mpi_recv(x, source);
+        }
+        NWORD_CREATOR_DEFINE_LR(Recv)
+    };
+
+}
+
 void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.dump", io::Dump::creator );
     env.insert_native_word("io.load", io::Load::creator );
