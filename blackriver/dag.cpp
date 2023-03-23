@@ -161,7 +161,7 @@ UserWord Enviroment::compile(const std::string& txt) {
         }
 
         static bool is_valid_name(std::string const &str) {
-            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "@~" || str == "!" || str == "!~" || str == "!!") {
+            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "!" || str == "!!" || str == "#") {
                 return false;
             }
             if (str.find_first_not_of("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") == std::string::npos) {
@@ -264,11 +264,9 @@ UserWord Enviroment::compile(const std::string& txt) {
         } else if ( token == "null" ) {
             newCode = WordCode::new_string( "" );
         } else if ( token == "@" ||
-                    token == "@~" ||
                     token == "!"  ||
-                    token == "!~" ||
                     token == "!!" ||
-                    token == "ch") {
+                    token == "#") {
             newCode = WordCode::new_builtin( token );
         } else if ( token[0] == '"' || token[0] == '\'' || token[0] == '$' ) {
             if ( token[0] == '"' || token[0] == '\'' ) {
@@ -322,29 +320,6 @@ namespace builtin {
         }
     };
 
-    struct BuiltinStaticGet : public BuiltinOperator {
-        Hash::Item value;
-        bool first;
-        BuiltinStaticGet() {
-            first = false;
-        }
-        virtual void run(Enviroment* env) {
-            auto& hash = env->hash();
-            auto& stack = env->stack();
-
-            if ( first == false) {
-                first = true;
-                auto name = stack.pop_string();
-
-                value = hash.find(name);
-                stack.push( Hash::Item2Cell(value) );
-                return;
-            }
-            stack.pop_string();
-            stack.push( Hash::Item2Cell(value) );
-        }
-    };
-
     struct BuiltinSet : public BuiltinOperator {
         virtual void run(Enviroment* env) {
             auto& hash = env->hash();
@@ -353,27 +328,6 @@ namespace builtin {
             auto name = stack.pop_string();
             Cell cell = stack.pop();
             hash.set(name, Hash::Cell2Item(cell));
-        }
-    };
-
-    struct BuiltinStaticSet : public BuiltinOperator {
-        bool first;
-        BuiltinStaticSet() {
-            first = false;
-        }
-        virtual void run(Enviroment* env) {
-            auto& hash = env->hash();
-            auto& stack = env->stack();
-
-            if ( first == false) {
-                first = true;
-                auto name = stack.pop_string();
-                Cell cell = stack.pop();
-                hash.set(name, Hash::Cell2Item(cell));
-                return;
-            }
-            stack.pop_string();
-            stack.pop();
         }
     };
 
@@ -427,15 +381,11 @@ void Enviroment::linking(DaG& dag, UserWord& word) {
                     BuiltinOperator* op = nullptr;
                     if ( code.str_ == "@" ) {
                         op = new builtin::BuiltinGet();
-                    } else if ( code.str_ == "@~" ) {
-                        op = new builtin::BuiltinStaticGet();
                     } else if ( code.str_ == "!" ) {
                         op = new builtin::BuiltinSet();
-                    } else if ( code.str_ == "!~" ) {
-                        op = new builtin::BuiltinStaticSet();
                     } else if ( code.str_ == "!!" ) {
                         op = new builtin::BuiltinDrop();
-                    } else if ( code.str_ == "ch" ) {
+                    } else if ( code.str_ == "#" ) {
                         op = new builtin::BuiltinChangeHash();
                     } else {
                         br_panic("Find an unsupoorted builtin operator!");

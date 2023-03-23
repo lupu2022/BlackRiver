@@ -1,5 +1,7 @@
 .PHONY: all
-all: br 
+
+TARGET = train_bloom
+all: $(TARGET) 
 
 FLAGS = -Wall 
 INC = -I. -I/engine/includes \
@@ -16,17 +18,20 @@ LINK = -L/home/teaonly/opt/nccl/lib -lnccl \
 ENGINE_LIBS = kernels/build/libkernels.a
 
 OBJS_DIR = ./objs
-BR_SRCS = br.cpp context.cpp tensortype.cpp cuda_tensor.cpp cpu_tensor.cpp dag.cpp nn.cpp 
+BR_SRCS = train_bloom.cpp context.cpp tensortype.cpp cuda_tensor.cpp cpu_tensor.cpp dag.cpp nn.cpp 
 BR_OBJS = ${BR_SRCS:%.cpp=$(OBJS_DIR)/%.o}
 
 $(OBJS_DIR)/%.o : %.cpp
 	@mkdir -p $(@D)
 	g++ $(FLAGS) $(INC) -c -o $@ $< 
 
-br: $(BR_OBJS) 
+$(TARGET): $(BR_OBJS) 
 	g++ $(FLAGS) -o $@ $(BR_OBJS) $(ENGINE_LIBS) $(LINK)
 
 clean:
 	rm -rf $(OBJS_DIR)
-	rm -f br
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	mpirun -n 4 -stdin 1 train_bloom
 

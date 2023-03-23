@@ -19,6 +19,18 @@ struct ComputingContext {
     static void shutdown();
 };
 
+struct CollectiveContext {
+    static int      mpi_world;
+    static int      mpi_rank;
+
+    static ncclComm_t      nccl_comm;
+    static ncclUniqueId    nccl_id;
+    static int             nccl_rank;
+    static int             nccl_world;
+
+    static void boot(int argc, char* argv[], int gpus);
+    static void shutdown();
+};
 
 } // end of namespace br
 
