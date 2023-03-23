@@ -416,4 +416,4 @@ tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
-} // end of namespace tt
+} // end of namespace br

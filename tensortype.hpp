@@ -240,7 +240,21 @@ public:
     TransformerComputing* impl();
 
 public:
-#include "tensortype-impl.hpp"
+    virtual ComputingReturn op_dump(tensor_t self);
+    virtual ComputingReturn op_zero(tensor_t self);
+    virtual ComputingReturn op_fill(tensor_t self, float value);
+    virtual ComputingReturn op_copy(tensor_t self, tensor_t dst);
+    virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape);
+    virtual ComputingReturn op_build_alibi(tensor_t self);
+    virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c);
+    virtual ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c);
+    virtual ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y);
+    virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y);
+    virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y);
+    virtual ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk);
+    virtual ComputingReturn op_softmax(tensor_t self, tensor_t out);
+    virtual ComputingReturn op_attn(tensor_t self, tensor_t v, tensor_t attn);
+    virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst);
 
 private:
     // basic info about tensor
@@ -258,9 +272,12 @@ private:
                                         cpu_bf16_t*,
                                         cuda_float_t*,
                                         cuda_bf16_t* >;
-
     TensorImpl impl_;
 };
+
+tensor_t create_cuda_float(std::vector<size_t>& shape);
+tensor_t create_cpu_float(std::vector<size_t>& shape);
+
 
 
 } // end of namespace br

@@ -1,7 +1,7 @@
 #include "tensortype.hpp"
 #include "dag.hpp"
 
-namespace dag {
+namespace br {
 
 std::ostream& operator<<(std::ostream& os, Cell& c) {
     if ( c.type_ == Cell::T_String ) {
@@ -38,24 +38,6 @@ std::ostream& operator<<(std::ostream& os, Stack& stack) {
     os << "----" << std::endl;
     return os;
 }
-
-/*
-DaG Enviroment::dag(const std::string& forward, const std::string& backward) {
-    auto fcode = compile(forward);
-    auto bcode = compile(backward);
-
-    DaG dag(*this, fcode, bcode);
-    return dag;
-}
-
-DaG* Enviroment::new_dag(const std::string& forward, const std::string& backward) {
-    auto fcode = compile(forward);
-    auto bcode = compile(backward);
-
-    DaG* dag = new DaG(*this, fcode, bcode);
-    return dag;
-}
-*/
 
 UserWord Enviroment::compile(const std::string& txt) {
     struct _ {

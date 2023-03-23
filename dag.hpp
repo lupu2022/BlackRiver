@@ -13,11 +13,8 @@
 #include <cmath>
 
 namespace br {
-    struct TensorType;
-}
 
-namespace dag {
-
+struct TensorType;
 using tensor_t = std::shared_ptr<br::TensorType>;
 
 // target number type
