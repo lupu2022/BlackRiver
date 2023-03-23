@@ -8,7 +8,7 @@
 namespace br {
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_dump(tensor_t self) {
+ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
     size_t first8 = std::min(self->shape().vec().back(), (size_t)8);
 
     if ( DT == DataType::Float ) {

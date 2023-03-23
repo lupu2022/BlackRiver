@@ -1,6 +1,5 @@
-#include "common.hpp"
-#include "context.hpp"
 #include "tensortype.hpp"
+#include "context.hpp"
 #include "nn.hpp"
 
 namespace br {
@@ -49,14 +48,6 @@ namespace nn {
             t->op_zero(t);
         }
         NWORD_CREATOR_DEFINE_LR(Zero)
-    };
-
-    struct Dump : public NativeWord {
-        virtual void run(Stack& stack) {
-            tensor_t t = stack.pop_tensor();
-            t->op_dump(t);
-        }
-        NWORD_CREATOR_DEFINE_LR(Dump)
     };
 
     struct Fill : public NativeWord {
@@ -179,7 +170,6 @@ void load_op_words(Enviroment& env) {
     env.insert_native_word("op.sync", nn::Sync::creator );
     env.insert_native_word("op.create", nn::Create::creator );
     env.insert_native_word("op.zero", nn::Zero::creator );
-    env.insert_native_word("op.dump", nn::Dump::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.view", nn::View::creator );
     env.insert_native_word("op.linear", nn::Linear::creator );
@@ -194,11 +184,37 @@ void load_op_words(Enviroment& env) {
 }
 
 namespace io {
+    struct Dump : public NativeWord {
+        virtual void run(Stack& stack) {
+            tensor_t t = stack.pop_tensor();
+            t->io_dump(t);
+        }
+        NWORD_CREATOR_DEFINE_LR(Dump)
+    };
 
+    struct Load : public NativeWord {
+        virtual void run(Stack& stack) {
+            std::string fileName = stack.pop_string();
+            tensor_t x = stack.pop_tensor();
+            x->io_load(x, fileName.c_str());
+        }
+        NWORD_CREATOR_DEFINE_LR(Load)
+    };
+
+    struct Save : public NativeWord {
+        virtual void run(Stack& stack) {
+            std::string fileName = stack.pop_string();
+            tensor_t x = stack.pop_tensor();
+            x->io_save(x, fileName.c_str());
+        }
+        NWORD_CREATOR_DEFINE_LR(Save)
+    };
 }
 
 void load_io_words(Enviroment& env) {
-
+    env.insert_native_word("io.dump", io::Dump::creator );
+    env.insert_native_word("io.load", io::Load::creator );
+    env.insert_native_word("io.save", io::Save::creator );
 }
 
 }// end of namespace br

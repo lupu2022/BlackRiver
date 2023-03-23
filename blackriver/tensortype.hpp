@@ -240,7 +240,6 @@ public:
     TransformerComputing* impl();
 
 public:
-    virtual ComputingReturn op_dump(tensor_t self);
     virtual ComputingReturn op_zero(tensor_t self);
     virtual ComputingReturn op_fill(tensor_t self, float value);
     virtual ComputingReturn op_copy(tensor_t self, tensor_t dst);
@@ -256,6 +255,9 @@ public:
     virtual ComputingReturn op_attn(tensor_t self, tensor_t v, tensor_t attn);
     virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst);
 
+    virtual ComputingReturn io_load(tensor_t self, const char* fileName);
+    virtual ComputingReturn io_save(tensor_t self, const char* fileName);
+    virtual ComputingReturn io_dump(tensor_t self);
 private:
     // basic info about tensor
     ShapeType shape_;

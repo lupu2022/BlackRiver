@@ -5,11 +5,8 @@
 
 namespace br {
 
-ComputingReturn TensorType::op_dump(tensor_t self) {
-    br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_dump(self);
-    op_check(ret, "dump");
-}
+
+
 
 ComputingReturn TensorType::op_zero(tensor_t self) {
     br_assert(self.get() == this, "can't be here!");
@@ -102,6 +99,24 @@ ComputingReturn TensorType::op_gelu(tensor_t self, tensor_t dst) {
     op_check(ret, "attn");
 }
 
+ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
+    br_assert(this == self.get() , "can't be here!");
+    auto ret = impl()->io_load(self, fileName);
+    op_check(ret, "load");
+}
+
+ComputingReturn TensorType::io_save(tensor_t self, const char* fileName) {
+    br_assert(this == self.get() , "can't be here!");
+    auto ret = impl()->io_save(self, fileName);
+    op_check(ret, "save");
+}
+
+ComputingReturn TensorType::io_dump(tensor_t self) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_dump(self);
+    op_check(ret, "dump");
+}
+
 TensorType::~TensorType() {
     if ( impl_index() == ImplType::CUDA_FLOAT ) {
         cuda_float_t* tensor = std::get<CUDA_FLOAT>(impl_);
@@ -134,6 +149,8 @@ TransformerComputing* TensorType::impl() {
     br_panic("Can't be here!");
     return nullptr;
 }
+
+
 
 }
 

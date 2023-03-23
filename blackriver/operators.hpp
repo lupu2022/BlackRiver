@@ -18,9 +18,16 @@ enum ComputingReturn {
 };
 
 struct TransformerComputing {
-    virtual ComputingReturn op_dump(tensor_t self) {
+    virtual ComputingReturn io_load(tensor_t self, const char* fileName) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn io_save(tensor_t self, const char* fileName) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn io_dump(tensor_t self) {
+        return OP_TODO_ERROR;
+    }
+
     virtual ComputingReturn op_zero(tensor_t self) {
         return OP_TODO_ERROR;
     }
