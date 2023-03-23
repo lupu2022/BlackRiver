@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include "computing.hpp"
+#include "context.hpp"
 #include "tensortype.hpp"
 #include "nn.hpp"
 
@@ -193,5 +193,12 @@ void load_op_words(Enviroment& env) {
     env.insert_native_word("op.gelu", nn::Gelu::creator);
 }
 
+namespace io {
+
+}
+
+void load_io_words(Enviroment& env) {
+
+}
 
 }// end of namespace br

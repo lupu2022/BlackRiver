@@ -161,7 +161,7 @@ UserWord Enviroment::compile(const std::string& txt) {
         }
 
         static bool is_valid_name(std::string const &str) {
-            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "@~" || str == "!" || str == "!~" ) {
+            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "@~" || str == "!" || str == "!~" || str == "!!") {
                 return false;
             }
             if (str.find_first_not_of("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") == std::string::npos) {
@@ -184,7 +184,6 @@ UserWord Enviroment::compile(const std::string& txt) {
     // 1. tokens post processing
     UserWord main_code;
     std::optional<UserWord> user_code;
-    std::optional<UserWord> loop_code;
     std::optional<size_t> list_count;
 
     for (size_t i = 0; i < tokens.size(); i++) {
@@ -194,9 +193,6 @@ UserWord Enviroment::compile(const std::string& txt) {
         if ( token == "%def" ) {
             if ( user_code.has_value() ) {
                 br_panic("Can't define a new user word inside another user word!");
-            }
-            if ( loop_code.has_value() ) {
-                br_panic("Can't define a new user word inside a loop macro!");
             }
             if ( list_count.has_value() ) {
                 br_panic("Can't define a new user word inside a list macro!");
@@ -218,50 +214,12 @@ UserWord Enviroment::compile(const std::string& txt) {
             }
             br_panic("Can't a valid name for #def macro!");
 
-        } else if (token == "%loop" ) {
-            if ( list_count.has_value() ) {
-                br_panic("Can't define a loop macro inside a list macro!");
-            }
-            loop_code = UserWord();
-
-            i = i + 1;
-            if ( i >= tokens.size() ) {
-                br_panic("Can't find #end for #def!");
-            }
-            token = tokens[i];
-            if ( _::is_valid_name(token) ) {
-                if ( user_words_.find(token) == user_words_.end() ) {
-                    if ( native_words_.find(token) == native_words_.end() ) {
-                        loop_code.value().push_back( WordCode::new_string( token) );
-                        continue;
-                    }
-                }
-            }
-            br_panic("Can't a valid ident for #loop macro!");
         } else if ( token == "[" ) {
-            if ( loop_code.has_value() ) {
-                br_panic("Can't define a list macro inside a list macro!");
-            }
             list_count = 0;
             continue;
         } else if ( token == "%end" ) {
             if ( list_count.has_value() ) {
-                br_panic("Can't ending a word or a loop in a list macro.");
-            }
-
-            if ( loop_code.has_value() ) {
-                auto looped = _::loop_macro( loop_code.value() );
-
-                UserWord* target = &main_code;
-                if ( user_code.has_value() ) {
-                    target = &user_code.value();
-                }
-                for (size_t i = 0; i < looped.size(); i++) {
-                    target->push_back(looped[i]);
-                }
-
-                loop_code.reset();
-                continue;
+                br_panic("Can't ending a word or in a list macro.");
             }
 
             if ( user_code.has_value() ) {
@@ -279,7 +237,7 @@ UserWord Enviroment::compile(const std::string& txt) {
                 continue;
             }
 
-            br_panic("Find #end without #def or #loop!");
+            br_panic("Find #end without #def");
         } else if ( token == "]" ) {
             if ( !list_count.has_value() ) {
                 br_panic("']' list macro appears without begin '['!");
@@ -334,9 +292,6 @@ UserWord Enviroment::compile(const std::string& txt) {
         if ( user_code.has_value() ) {
             target = &user_code.value();
         }
-        if ( loop_code.has_value() ) {
-            target = &loop_code.value();
-        }
         if ( list_count.has_value() ) {
             list_count = list_count.value() + 1;
         }
@@ -346,9 +301,6 @@ UserWord Enviroment::compile(const std::string& txt) {
 
     if (list_count.has_value()) {
         br_panic("List macro without ']' ending!");
-    }
-    if (loop_code.has_value()) {
-        br_panic("Loop macro without #end ending!");
     }
     if (user_code.has_value()) {
         br_panic("Define macro without #end ending!");
@@ -605,6 +557,16 @@ namespace base {
         }
         NWORD_CREATOR_DEFINE_LR(Div)
     };
+
+    struct Combin : public NativeWord {
+        virtual void run(Stack& stack) {
+            auto a = stack.pop_string();
+            auto b = stack.pop_string();
+            std::string c = b + a;
+            stack.push_string( c );
+        }
+        NWORD_CREATOR_DEFINE_LR(Combin)
+    };
 }
 
 void Enviroment::load_base_words() {
@@ -622,6 +584,8 @@ void Enviroment::load_base_words() {
     insert_native_word("-", base::Sub::creator );
     insert_native_word("*", base::Mul::creator );
     insert_native_word("/", base::Div::creator );
+
+    insert_native_word("|", base::Combin::creator );
 }
 
 

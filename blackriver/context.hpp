@@ -1,5 +1,5 @@
-#ifndef _COMMPUTING_HPP_
-#define _COMMPUTING_HPP_
+#ifndef _CONTEXT_HPP_
+#define _CONTEXT_HPP_
 
 #include "common.hpp"
 

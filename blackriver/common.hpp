@@ -67,7 +67,7 @@ namespace br {
 // some common help functions
 inline void _M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg) {
     if (!expr) {
-        std::cerr << "BR::Assert failed:\t" << msg << "\n"
+        std::cerr << "**Assert failed:\t" << msg << "\n"
             << "Expected:\t" << expr_str << "\n"
             << "Source:\t\t" << file << ", line " << line << "\n";
         abort();
@@ -75,7 +75,7 @@ inline void _M_Assert(const char* expr_str, bool expr, const char* file, int lin
 }
 
 inline void _M_Panic(const char* file, int line, const char* msg) {
-    std::cerr << "BR::Panic:\t" << msg << "\n"
+    std::cerr << "**Panic:\t" << msg << "\n"
         << "Source:\t\t" << file << ", line " << line << "\n";
     abort();
 }

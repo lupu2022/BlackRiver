@@ -1,7 +1,7 @@
 #include <cmath>
 #include <algorithm>
 
-#include "computing.hpp"
+#include "context.hpp"
 #include "cuda_tensor.hpp"
 #include "kernels/kernels.h"
 
