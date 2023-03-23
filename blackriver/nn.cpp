@@ -166,23 +166,6 @@ namespace nn {
 
 }
 
-void load_op_words(Enviroment& env) {
-    env.insert_native_word("op.sync", nn::Sync::creator );
-    env.insert_native_word("op.create", nn::Create::creator );
-    env.insert_native_word("op.zero", nn::Zero::creator );
-    env.insert_native_word("op.fill", nn::Fill::creator );
-    env.insert_native_word("op.view", nn::View::creator );
-    env.insert_native_word("op.linear", nn::Linear::creator );
-    env.insert_native_word("op.layernorm", nn::Layernorm::creator );
-    env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
-    env.insert_native_word("op.build_alibi", nn::BuildAlibi::creator);
-    env.insert_native_word("op.add", nn::Add::creator);
-    env.insert_native_word("op.querykey", nn::QueryKey::creator);
-    env.insert_native_word("op.softmax", nn::Softmax::creator);
-    env.insert_native_word("op.attn", nn::Attn::creator);
-    env.insert_native_word("op.gelu", nn::Gelu::creator);
-}
-
 namespace io {
     struct Dump : public NativeWord {
         virtual void run(Stack& stack) {
@@ -211,10 +194,26 @@ namespace io {
     };
 }
 
-void load_io_words(Enviroment& env) {
+void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.dump", io::Dump::creator );
     env.insert_native_word("io.load", io::Load::creator );
     env.insert_native_word("io.save", io::Save::creator );
+
+    env.insert_native_word("op.sync", nn::Sync::creator );
+    env.insert_native_word("op.create", nn::Create::creator );
+    env.insert_native_word("op.zero", nn::Zero::creator );
+    env.insert_native_word("op.fill", nn::Fill::creator );
+    env.insert_native_word("op.view", nn::View::creator );
+    env.insert_native_word("op.linear", nn::Linear::creator );
+    env.insert_native_word("op.layernorm", nn::Layernorm::creator );
+    env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
+    env.insert_native_word("op.build_alibi", nn::BuildAlibi::creator);
+    env.insert_native_word("op.add", nn::Add::creator);
+    env.insert_native_word("op.querykey", nn::QueryKey::creator);
+    env.insert_native_word("op.softmax", nn::Softmax::creator);
+    env.insert_native_word("op.attn", nn::Attn::creator);
+    env.insert_native_word("op.gelu", nn::Gelu::creator);
+
 }
 
 }// end of namespace br

@@ -397,14 +397,13 @@ struct Enviroment {
         native_words_[name] = fn;
     }
 
-    DaG* build_with(const std::string& txt) {
+    DaG* build(const std::string& txt) {
         DaG* dag = new DaG(this);
 
         UserWord myCode = compile(txt);
         linking(*dag, myCode);
         return dag;
     }
-
     void run(DaG* dag) {
         br_assert( dag->env_ == this, "Can't be here!");
         run_(dag, 0);
@@ -421,7 +420,6 @@ struct Enviroment {
     Stack& stack() {
         return stack_;
     }
-
     Hash& hash() {
         return hashes_[target_];
     }
@@ -431,6 +429,12 @@ struct Enviroment {
             br_panic("Change hash out ot size");
         }
         target_ = new_hash;
+    }
+    size_t hashes_current() {
+        return target_;
+    }
+    size_t hashes_num() {
+        return hashes_.size();
     }
 
 private:

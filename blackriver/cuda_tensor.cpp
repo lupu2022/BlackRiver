@@ -3,6 +3,7 @@
 
 #include "context.hpp"
 #include "cuda_tensor.hpp"
+#include "cpu_tensor.hpp"
 #include "kernels/kernels.h"
 
 namespace br {
@@ -79,32 +80,19 @@ ComputingReturn CUDATensor<DT>::op_fill(tensor_t self, float value) {
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t dst) {
-    /*
-    if ( !ShapeType::is_dense(shape_, stride_) ) {
-        return OP_TODO_ERROR;
-    }
+ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
     if ( DT == DataType::Float ) {
-        void* y = dst->cpu_float()->data();
-        void* x = data();
+        if ( src->is_cpu() ) {
+            void* x = src->cpu_float()->data();
+            void* y = data();
 
-        CUBLAS_CHECK( cublasGetVector(numel_, sizeof(float), x, 1, y, 1) );
+            CUBLAS_CHECK( cublasSetVector(self->items(), sizeof(float), x, 1, y, 1) );
+            return OP_OK;
+        }
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * sizeof(float), cudaMemcpyDeviceToDevice, stream));
         return OP_OK;
     }
-
-    if ( !ShapeType::is_dense(shape_, stride_) ) {
-        return OP_TODO_ERROR;
-    }
-
-    if ( DT == DataType::Float ) {
-        void* x = src->cpu_float()->data();
-        void* y = data();
-
-        CUBLAS_CHECK( cublasSetVector(numel_, sizeof(float), x, 1, y, 1) );
-        return OP_OK;
-    }
-    return OP_TODO_ERROR;
-    */
 
     return OP_TODO_ERROR;
 }

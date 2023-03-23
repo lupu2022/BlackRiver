@@ -1,12 +1,55 @@
+#include <chrono>
+#include <msgpack.hpp>
+
 #include "common.hpp"
+#include "context.hpp"
 #include "cpu_tensor.hpp"
+#include "cuda_tensor.hpp"
 
 namespace br {
+
+template<typename T>
+void load_data(const char* weights_file, std::vector<T> &allPerform) {
+    std::ifstream t(weights_file, std::ios::binary);
+
+    t.seekg(0, std::ios::end);
+    size_t totalSize = t.tellg();
+    t.seekg(0, std::ios::beg);
+
+    char* memblock;
+    memblock = new char [totalSize];
+    t.read(memblock, totalSize);
+    t.close();
+
+    try {
+        auto oh = msgpack::unpack((const char*)memblock, totalSize);
+        allPerform = oh.get().as<std::vector<T>>();
+        delete memblock;
+    }
+    catch (...) {
+        std::cout << "Unpack weight error!" << std::endl;
+        assert(false);
+    }
+}
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::op_zero(tensor_t self) {
     if ( _DTYPE_ == DataType::Float ) {
         memset( mem_, 0, sizeof(float) * self->items() );
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+template <DataType _DTYPE_>
+ComputingReturn CPUTensor<_DTYPE_>::op_copy(tensor_t self, tensor_t src) {
+    if ( _DTYPE_ == DataType::Float ) {
+        if ( src->is_cpu() ) {
+            memcpy(data(), src->cpu_float()->data(), self->items() * sizeof(float) );
+            return OP_OK;
+        }
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * sizeof(float), cudaMemcpyDeviceToHost, stream));
         return OP_OK;
     }
     return OP_TODO_ERROR;
@@ -62,15 +105,18 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_save(tensor_t self, const char* fileName) {
-    if ( _DTYPE_ == DataType::Float ) {
-        return OP_OK;
-    }
+    // TODO
     return OP_TODO_ERROR;
 }
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName) {
     if ( _DTYPE_ == DataType::Float ) {
+        std::vector<float> src;
+        load_data(fileName, src);
+
+        br_assert(src.size() == self->items() , "loaded data must has same size");
+        memcpy(data(), src.data(), self->items() * sizeof(float));
         return OP_OK;
     }
     return OP_TODO_ERROR;

@@ -5,9 +5,6 @@
 
 namespace br {
 
-
-
-
 ComputingReturn TensorType::op_zero(tensor_t self) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_zero(self);
@@ -20,10 +17,10 @@ ComputingReturn TensorType::op_fill(tensor_t self, float value) {
     op_check(ret, "fill");
 }
 
-ComputingReturn TensorType::op_copy(tensor_t self, tensor_t dst) {
+ComputingReturn TensorType::op_copy(tensor_t self, tensor_t src) {
     br_assert(self.get() == this, "can't be here!");
-    br_assert(items() == dst->items(), "copy must has same size");
-    auto ret = impl()->op_copy(self, dst);
+    br_assert(items() == src->items(), "copy must has same size");
+    auto ret = impl()->op_copy(self, src);
     op_check(ret, "copy");
 }
 
