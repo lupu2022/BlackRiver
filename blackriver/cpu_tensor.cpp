@@ -7,31 +7,6 @@
 #include "cuda_tensor.hpp"
 
 namespace br {
-
-template<typename T>
-void load_data(const char* weights_file, std::vector<T> &allPerform) {
-    std::ifstream t(weights_file, std::ios::binary);
-
-    t.seekg(0, std::ios::end);
-    size_t totalSize = t.tellg();
-    t.seekg(0, std::ios::beg);
-
-    char* memblock;
-    memblock = new char [totalSize];
-    t.read(memblock, totalSize);
-    t.close();
-
-    try {
-        auto oh = msgpack::unpack((const char*)memblock, totalSize);
-        allPerform = oh.get().as<std::vector<T>>();
-        delete memblock;
-    }
-    catch (...) {
-        std::cout << "Unpack weight error!" << std::endl;
-        assert(false);
-    }
-}
-
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::op_zero(tensor_t self) {
     if ( _DTYPE_ == DataType::Float ) {

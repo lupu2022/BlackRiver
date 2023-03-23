@@ -185,6 +185,7 @@ UserWord Enviroment::compile(const std::string& txt) {
     UserWord main_code;
     std::optional<UserWord> user_code;
     std::optional<size_t> list_count;
+    list_count.reset();
 
     for (size_t i = 0; i < tokens.size(); i++) {
         auto token = tokens[i];
@@ -517,6 +518,15 @@ namespace base {
         }
         NWORD_CREATOR_DEFINE_LR(Combin)
     };
+
+    struct Echo : public NativeWord {
+        virtual void run(Stack& stack) {
+            auto msg = stack.pop_string();
+            std::cout << msg << std::endl;
+        }
+        NWORD_CREATOR_DEFINE_LR(Echo)
+    };
+
 }
 
 void Enviroment::load_base_words() {
@@ -536,6 +546,7 @@ void Enviroment::load_base_words() {
     insert_native_word("/", base::Div::creator );
 
     insert_native_word("|", base::Combin::creator );
+    insert_native_word("echo", base::Echo::creator );
 }
 
 

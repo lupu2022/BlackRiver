@@ -53,6 +53,8 @@ struct CUDATensor : public TransformerComputing {
 
     // Interfaces from TransformerComputing
     virtual ComputingReturn io_dump(tensor_t self);
+    virtual ComputingReturn io_load(tensor_t self, const char* fileName);
+
     virtual ComputingReturn op_zero(tensor_t self);
     virtual ComputingReturn op_fill(tensor_t self, float value);
     virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape);

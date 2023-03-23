@@ -1,0 +1,61 @@
+%def forward
+    ;; layernorm for input
+    "xinput" @ "xb" @ "xc" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xe" @ op.layernorm 
+    
+    ;; get kqv
+    {
+        "xe" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
+        "xe" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
+        "xe" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
+    }
+
+    ;; transponse
+    {
+        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
+        "yb" @ "za" @ op.transpos_0213          ;; key -> za
+        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
+    }
+   
+    ;; get query@key
+    "zd" @  "za" @  "xll" @ op.querykey 
+
+    ;; added alibi and apply mask
+    "xll" @ "alibi" @ "xll" @ op.add
+  
+    ;; do softmax
+    "xll" @ "xll" @ op.softmax
+
+    ;; do attention and transpose back
+    "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
+    "zc" @ "ya" @ op.transpos_0213
+  
+
+    ;; do dense
+    "xa" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
+   
+    ;; added residual 
+    "xb" @ "xinput" @ "xa" @ op.add
+
+    ;; post layernorm
+    "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @ op.layernorm
+    
+    ;; MLP
+    ;; xa atteion output
+    ;; xb passed post layernorm
+    {
+
+        ;; 4h dense & glue
+        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4b" @ op.linear
+        "x4b" @ "x4b" @ op.gelu
+
+        ;; 4h dense
+        "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
+
+        ;; residual 
+        "xa" @ "xb" @ "xa" @ op.add
+    }
+
+    op.sync
+    "xa" @ io.dump
+%end
+

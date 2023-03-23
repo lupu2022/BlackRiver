@@ -1,0 +1,259 @@
+;
+;   global define
+;   
+
+"model/weights/"   "MSG_FILES_PATH"    !
+
+
+10      "SUB_BATCH"             !
+2048    "TOKEN_LEN"             !
+4096    "HIDDEN_SIZE"           !
+32      "HEADS_NUM"             !
+128     "HEAD_HIDDEN"           !
+12288   "HIDDEN_SIZE_x3"        !
+16384   "HIDDEN_SIZE_x4"        !
+
+"HIDDEN_SIZE" @ dup * "HIDDEN_SQUARE" ! 
+
+("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ * * ) "X_SIZE" !
+
+"X_SIZE" @ 5 *  "QUERYKEY_OFFSET" !
+
+%def create_weight
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias"    !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias"    !
+
+    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight"  !
+    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                      "query_key_value.bias"    !
+
+    ;
+    ; dummy split to three tensors, 4096 * 4096 = 16777216
+    ;
+    ("query_key_value.weight" @ 0                       "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight" !
+    ("query_key_value.weight" @ "HIDDEN_SQUARE" @       "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight" !          
+    ("query_key_value.weight" @ ("HIDDEN_SQUARE" @ 2 *) "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight" !
+
+    ("query_key_value.bias" @ 0                     "HIDDEN_SIZE" @ 1 op.view) "query.bias" !
+    ("query_key_value.bias" @ "HIDDEN_SIZE" @       "HIDDEN_SIZE" @ 1 op.view) "key.bias"   !
+    ("query_key_value.bias" @ ("HIDDEN_SIZE" @ 2 *) "HIDDEN_SIZE" @ 1 op.view) "value.bias" !
+
+    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight"  !
+    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias"    !
+
+    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight"  !
+    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias"    !
+
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias"    !
+
+%end
+
+%def create_grad
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight_"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias_"    !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight_"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias_"    !
+
+    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight_"  !
+    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                       "query_key_value.bias_"    !
+
+    ("query_key_value.weight_" @ 0                        "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight_" !
+    ("query_key_value.weight_" @ "HIDDEN_SQUARE" @        "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight_" !          
+    ("query_key_value.weight_" @ ("HIDDEN_SQUARE" @ 2 *)  "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight_" !
+
+    ("query_key_value.bias_" @ 0                      "HIDDEN_SIZE" @ 1 op.view) "query.bias_" !
+    ("query_key_value.bias_" @ "HIDDEN_SIZE" @        "HIDDEN_SIZE" @ 1 op.view) "key.bias_"   !
+    ("query_key_value.bias_" @ ("HIDDEN_SIZE" @ 2 *)  "HIDDEN_SIZE" @ 1 op.view) "value.bias_" !
+
+    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight_"  !
+    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias_"    !
+
+    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight_"  !
+    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias_"    !
+
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight_"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias_"    !
+%end
+
+%def create_var
+    ; some const memroy
+    ("SUB_BATCH" @ "HEADS_NUM" @  1 "TOKEN_LEN" @  4 $DEVICE @ op.create)  "alibi"   !
+    "alibi" @ op.build_alibi
+
+    ; input variable
+    ("SUB_BATCH" @ "TOKEN_LEN" @  "HIDDEN_SIZE" @ 3   $DEVICE @ op.create)  "xinput"  !
+    ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   $DEVICE @ op.create)  "xmask"   !
+
+    ;
+    ;   total 8M free memory
+    ;
+    (2415919104 1 $DEVICE @ op.create)  "var" !
+
+    ;;
+    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xa" !
+    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xb" !
+    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xc" !
+    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xd" !
+    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xe" !
+
+    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "ya" !
+    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yb" !
+    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yc" !
+    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yd" !
+    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "ye" !
+
+    ("var" @ 0                  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "za" !
+    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zb" !
+    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zc" !
+    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zd" !
+    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "ze" !
+   
+    ;;
+    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3a" ! 
+    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3b" ! 
+    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x4" @ 3) op.view) "x4a" ! 
+    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x4" @ 3) op.view) "x4b" ! 
+
+    ;; put qv to bottom of memeory
+    ("var" @ "QUERYKEY_OFFSET" @  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "TOKEN_LEN" @ 4) op.view) "xll" !
+
+%end
+
+%def load_weight
+    "header" !
+    
+    {
+        "loading input_layernorm ..." echo
+
+        "input_layernorm.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.msg" | 
+        io.load
+   
+        "input_layernorm.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.bias.msg" | 
+        io.load
+    }
+
+    {
+        "loading query_key_value ..." echo
+
+        "query_key_value.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.weight.msg" | 
+        io.load
+   
+        "query_key_value.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.bias.msg" | 
+        io.load
+    }
+
+    {
+        "loading dense ..." echo
+
+        "dense.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense.weight.msg" | 
+        io.load
+   
+        "dense.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense.bias.msg" | 
+        io.load
+    }
+
+    {
+        "loading dense_h_to_4h ..." echo
+
+        "dense_h_to_4h.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.weight.msg" | 
+        io.load
+   
+        "dense_h_to_4h.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.bias.msg" | 
+        io.load
+    }
+    
+    {
+        "loading dense_4h_to_h ..." echo
+
+        "dense_4h_to_h.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.weight.msg" | 
+        io.load
+   
+        "dense_4h_to_h.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.bias.msg" | 
+        io.load
+    }
+
+    {
+        "loading post_attention_layernorm ..." echo
+
+        "post_attention_layernorm.weight" @
+        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.weight.msg" | 
+        io.load
+   
+        "post_attention_layernorm.bias" @
+        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.bias.msg" | 
+        io.load
+    }
+
+    "header" !!
+%end
+
+%def sync
+    "Sync with GPU..." echo
+    
+    dup
+    
+    0 #        "input_layernorm.weight" @  
+    swap #     "input_layernorm.weight" @  op.copy
+    dup
+  
+    0 #        "input_layernorm.bias" @
+    swap #     "input_layernorm.bias" @    op.copy 
+    dup
+
+    0 #        "query_key_value.weight" @
+    swap #     "query_key_value.weight" @  op.copy
+    dup
+
+    0 #        "query_key_value.bias" @
+    swap #     "query_key_value.bias" @    op.copy
+    dup
+
+    0 #        "dense.weight" @
+    swap #     "dense.weight" @            op.copy
+    dup  
+
+    0 #        "dense.bias" @
+    swap #     "dense.bias" @              op.copy
+    dup
+
+    0 #        "dense_h_to_4h.weight" @
+    swap #     "dense_h_to_4h.weight" @    op.copy
+    dup  
+
+    0 #        "dense_h_to_4h.bias" @
+    swap #     "dense_h_to_4h.bias" @      op.copy
+    dup
+
+    0 #        "dense_4h_to_h.weight" @
+    swap #     "dense_4h_to_h.weight" @    op.copy
+    dup    
+
+    0 #        "dense_4h_to_h.bias" @
+    swap #     "dense_4h_to_h.bias" @      op.copy
+    dup
+  
+    0 #        "post_attention_layernorm.weight" @
+    swap #     "post_attention_layernorm.weight" @  op.copy
+
+    0 #        "post_attention_layernorm.bias" @
+    swap #     "post_attention_layernorm.bias" @    op.copy
+
+    op.sync
+    "Done." echo
+%end
+
+

@@ -24,11 +24,12 @@ int main(int argc, char* argv[] ) {
 
     if ( br::CollectiveContext::mpi_rank == 0) {
 
-    } else if ( br::CollectiveContext::mpi_rank == 1 || br::CollectiveContext::mpi_rank == 2) {
+    } else if ( br::CollectiveContext::mpi_rank == 1) {
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         br::Enviroment* env = new br::Enviroment(15 + 1);
         br::load_nn_words(*env);
 
+        // create weight/grad/var for every layer , zero layer is GPU
         {
             std::string init_code = fileToString("model/init.words");
             br::DaG* init_wd = env->build(init_code);
@@ -47,12 +48,30 @@ int main(int argc, char* argv[] ) {
                 env->execute("create_weight");
                 env->execute("create_grad");
             }
+
+            env->change(1);
+            env->execute("'h0' load_weight");
+            env->execute("1 sync");
             delete init_wd;
+        }
+
+        {
+            std::string train_code = fileToString("model/train.words");
+            env->change(0);
+            env->execute(train_code);
+            env->execute("'xinput' @ 'model/xinput.msg' io.load");
+            env->execute("op.sync");
+            std::cout << "Executing forward..." << std::endl;
+            env->execute("forward");
         }
 
         sleep(5);
 
         delete env;
+    } else if ( br::CollectiveContext::mpi_rank == 2) {
+        br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+
+        sleep(5);
     } else if ( br::CollectiveContext::mpi_rank == 3) {
 
     } else {

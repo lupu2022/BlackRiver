@@ -3,7 +3,7 @@
 TARGET = train_bloom
 all: $(TARGET) 
 
-FLAGS = -Wall 
+FLAGS = -Wall -O2 
 INC = -I. -I/engine/includes \
 	  -I/home/teaonly/opt/nccl/include \
 	  -I/home/teaonly/opt/msgpack \

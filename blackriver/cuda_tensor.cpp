@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 
+#include "common.hpp"
 #include "context.hpp"
 #include "cuda_tensor.hpp"
 #include "cpu_tensor.hpp"
@@ -52,6 +53,23 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
 }
 
 template<DataType DT>
+ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
+    if ( DT == DataType::Float ) {
+        std::vector<float> src;
+        load_data(fileName, src);
+
+        br_assert(src.size() == self->items() , "loaded data must has same size");
+        void* x = src.data();
+        void* y = data();
+
+        CUBLAS_CHECK( cublasSetVector(self->items(), sizeof(float), x, 1, y, 1) );
+        return OP_OK;
+    }
+
+    return OP_TODO_ERROR;
+}
+
+template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_zero(tensor_t self) {
     if ( DT == DataType::Float ) {
         void *dst = data();
@@ -86,7 +104,8 @@ ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
             void* x = src->cpu_float()->data();
             void* y = data();
 
-            CUBLAS_CHECK( cublasSetVector(self->items(), sizeof(float), x, 1, y, 1) );
+            auto stream = ComputingContext::cuda_stream;
+            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
             return OP_OK;
         }
         auto stream = ComputingContext::cuda_stream;
@@ -162,7 +181,7 @@ ComputingReturn CUDATensor<DT>::op_build_alibi(tensor_t self) {
     if ( DT == DataType::Float ) {
         size_t batch = self->shape().vec()[0];
         size_t heads = self->shape().vec()[1];
-        size_t tokens = self->shape().vec()[2];
+        size_t tokens = self->shape().vec()[3];
 
         if ( heads & ( heads - 1) ) {
             br_panic("Only support heads number is power of 2");
@@ -403,5 +422,12 @@ tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     CUDATensor<DataType::Float>* tensor = new CUDATensor<DataType::Float>(shape);
     return std::make_shared<TensorType>(tensor, shape);
 }
+
+tensor_t create_cuda_half(std::vector<size_t>& shape_) {
+    ShapeType shape(shape_);
+    CUDATensor<DataType::BF16>* tensor = new CUDATensor<DataType::BF16>(shape);
+    return std::make_shared<TensorType>(tensor, shape);
+}
+
 
 } // end of namespace br

@@ -70,6 +70,15 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(View)
     };
 
+    struct Copy : public NativeWord {
+        virtual void run(Stack& stack) {
+            tensor_t src = stack.pop_tensor();
+            tensor_t dst = stack.pop_tensor();
+            dst->op_copy(dst, src);
+        }
+        NWORD_CREATOR_DEFINE_LR(Copy)
+    };
+
     struct Linear : public NativeWord {
         virtual void run(Stack& stack) {
             tensor_t y = stack.pop_tensor();
@@ -204,6 +213,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.view", nn::View::creator );
+    env.insert_native_word("op.copy", nn::Copy::creator );
     env.insert_native_word("op.linear", nn::Linear::creator );
     env.insert_native_word("op.layernorm", nn::Layernorm::creator );
     env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
@@ -213,7 +223,6 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.softmax", nn::Softmax::creator);
     env.insert_native_word("op.attn", nn::Attn::creator);
     env.insert_native_word("op.gelu", nn::Gelu::creator);
-
 }
 
 }// end of namespace br
