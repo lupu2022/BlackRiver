@@ -16,7 +16,7 @@ LINK = -L/home/teaonly/opt/nccl/lib -lnccl \
 ENGINE_LIBS = kernels/build/libkernels.a
 
 OBJS_DIR = ./objs
-BR_SRCS = br.cpp 
+BR_SRCS = br.cpp computing.cpp tensortype.cpp cuda_tensor.cpp 
 BR_OBJS = ${BR_SRCS:%.cpp=$(OBJS_DIR)/%.o}
 
 $(OBJS_DIR)/%.o : %.cpp
@@ -28,7 +28,5 @@ br: $(BR_OBJS)
 
 clean:
 	rm -rf $(OBJS_DIR)
-	rm -f ezt 
+	rm -f br
 
-run: br
-	mpirun -n 4 -stdin 1 br
