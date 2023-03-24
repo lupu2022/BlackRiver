@@ -30,6 +30,15 @@ struct TransformerComputing {
     virtual ComputingReturn io_mpi_recv(tensor_t self, int source) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn io_mpi_send(tensor_t self, int dst) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn io_nccl_recv(tensor_t self, int source) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn io_nccl_send(tensor_t self, int dst) {
+        return OP_TODO_ERROR;
+    }
 
     virtual ComputingReturn op_zero(tensor_t self) {
         return OP_TODO_ERROR;

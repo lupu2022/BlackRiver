@@ -20,11 +20,11 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(Sync)
     };
-    struct Create : public StaticNativeWord {
-        tensor_t t;
-        virtual void run_first(Stack& stack) {
+    struct Create : public NativeWord {
+        virtual void run(Stack& stack) {
             auto device = stack.pop_string();
             auto shape = fetch_shape(stack);
+            tensor_t t;
             if ( device == "cuda" ) {
                 t = br::create_cuda_float(shape);
             } else if ( device == "cpu" ) {
@@ -32,11 +32,6 @@ namespace nn {
             } else {
                 br_panic("Can' be here!");
             }
-            stack.push_tensor(t);
-        }
-        virtual void run_next(Stack& stack) {
-            stack.pop_string();
-            stack.pop_number_list();
             stack.push_tensor(t);
         }
         NWORD_CREATOR_DEFINE_LR(Create)
@@ -201,16 +196,14 @@ namespace io {
         }
         NWORD_CREATOR_DEFINE_LR(Save)
     };
-}
 
-namespace mpi {
-    struct Recv : public NativeWord {
+    struct MPIRecv : public NativeWord {
         virtual void run(Stack& stack) {
             int source = stack.pop_number();
             tensor_t x = stack.pop_tensor();
             x->io_mpi_recv(x, source);
         }
-        NWORD_CREATOR_DEFINE_LR(Recv)
+        NWORD_CREATOR_DEFINE_LR(MPIRecv)
     };
 
 }
@@ -219,6 +212,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.dump", io::Dump::creator );
     env.insert_native_word("io.load", io::Load::creator );
     env.insert_native_word("io.save", io::Save::creator );
+    env.insert_native_word("io.mpi.recv", io::MPIRecv::creator );
 
     env.insert_native_word("op.sync", nn::Sync::creator );
     env.insert_native_word("op.create", nn::Create::creator );

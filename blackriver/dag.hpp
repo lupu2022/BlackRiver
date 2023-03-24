@@ -331,23 +331,6 @@ struct NativeWord {
     }
     virtual void run(Stack& stack) = 0;
 };
-struct StaticNativeWord : public NativeWord {
-    StaticNativeWord() {
-        first = false;
-    }
-    virtual void run(Stack& stack) {
-        if ( first == false ) {
-            first = true;
-            run_first(stack);
-            return;
-        }
-        run_next(stack);
-    }
-    virtual void run_first(Stack& stack) = 0;
-    virtual void run_next(Stack& stack) = 0;
-private:
-    bool first;
-};
 
 using NativeCreator = NativeWord* (Enviroment&);
 using UserWord = std::vector<WordCode>;

@@ -463,16 +463,6 @@ namespace base {
         NWORD_CREATOR_DEFINE_LR(Rot)
     };
 
-    struct OnlyOnce : public StaticNativeWord {
-        virtual void run_first(Stack& stack) {
-            return;
-        }
-        virtual void run_next(Stack& stack) {
-            stack.drop();
-        }
-        NWORD_CREATOR_DEFINE_LR(OnlyOnce)
-    };
-
     struct Add : public NativeWord {
         virtual void run(Stack& stack) {
             double a = stack.pop_number();
@@ -536,7 +526,6 @@ void Enviroment::load_base_words() {
     insert_native_word("dup2", base::Dup2::creator );
     insert_native_word("swap", base::Swap::creator );
     insert_native_word("rot", base::Rot::creator );
-    insert_native_word("~", base::OnlyOnce::creator);
     insert_native_word("?", base::Dump::creator );
     insert_native_word("^", base::Exit::creator );
 

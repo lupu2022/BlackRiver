@@ -128,7 +128,7 @@
 
 %def load_weight
     "header" !
-    
+     
     {
         "loading input_layernorm ..." echo
 
