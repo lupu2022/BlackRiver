@@ -1,3 +1,5 @@
+#include <iostream>
+#include <chrono>
 #include <unistd.h>
 
 #include "common.hpp"
@@ -58,7 +60,11 @@ int main(int argc, char* argv[] ) {
         std::cout << std::endl;
         std::cout << std::endl;
         std::cout << " ########BEGIN SEND XINPUT############## " << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
         MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+
+        MPI_Send(&start, sizeof(start), MPI_BYTE, 1, 0, MPI_COMM_WORLD);
+
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         br::Enviroment* env = new br::Enviroment(15 + 1);
@@ -70,6 +76,14 @@ int main(int argc, char* argv[] ) {
         env->execute(train_code);
         env->execute("train_0");
 
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
+
+        MPI_Recv(&start, sizeof(start), MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        std::cout << "Time: " << duration.count() << std::endl;
         sleep(5);
 
         delete env;
@@ -85,6 +99,7 @@ int main(int argc, char* argv[] ) {
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
         env->execute("train_1");
+
 
         sleep(5);
 
