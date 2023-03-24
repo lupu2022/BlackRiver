@@ -60,7 +60,8 @@ void CollectiveContext::boot(int argc, char* argv[], int gpus) {
         nccl_world = gpus;
         nccl_rank = mpi_rank - 1;
 
-        CUDA_CHECK( cudaSetDevice(nccl_rank) );
+        ComputingContext::boot(nccl_rank);
+
         NCCL_CHECK(ncclCommInitRank(&nccl_comm, nccl_world, nccl_id, nccl_rank));
     }
 }

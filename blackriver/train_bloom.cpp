@@ -53,9 +53,14 @@ int main(int argc, char* argv[] ) {
         std::vector<float> xinput;
         br::load_data("model/xinput.msg", xinput);
 
+        sleep(30);
+
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << " ###################### " << std::endl;
         MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
     } else if ( br::CollectiveContext::mpi_rank == 1) {
-        br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+        //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         br::Enviroment* env = new br::Enviroment(15 + 1);
         br::load_nn_words(*env);
 
@@ -68,10 +73,24 @@ int main(int argc, char* argv[] ) {
         sleep(5);
 
         delete env;
+
+        br::ComputingContext::shutdown();
     } else if ( br::CollectiveContext::mpi_rank == 2) {
-        br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+        //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+        br::Enviroment* env = new br::Enviroment(15 + 1);
+        br::load_nn_words(*env);
+
+        init_env(env);
+
+        std::string train_code = fileToString("model/train.words");
+        env->execute(train_code);
+        env->execute("train_1");
 
         sleep(5);
+
+        delete env;
+
+        br::ComputingContext::shutdown();
     } else if ( br::CollectiveContext::mpi_rank == 3) {
 
     } else {

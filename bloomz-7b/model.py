@@ -28,12 +28,15 @@ from torch.nn import functional as F
 
 def test():
     config = LLMConfig();
-    model = BloomForCausalLM(config);
-    model.eval();
+
+    h0 = BloomBlock(config);
+    h1 = BloomBlock(config);
 
     path = "pth/"
     hname = "h_0.pth";
-    model.transformer.h[0].load_state_dict( torch.load(path + hname) );
+    h0.load_state_dict( torch.load(path + hname) );
+    hname = "h_1.pth";
+    h1.load_state_dict( torch.load(path + hname) );
 
     x = torch.load("xinput.pth")["x"];
 
@@ -44,11 +47,10 @@ def test():
     alibi = build_alibi_tensor(mask, heads, mask.dtype);
     mask = _expand_mask(mask, tokens);
 
-    model = model.transformer.h[0];
+    x1 = h0(x, alibi, mask);
+    x2 = h1(x1[0], alibi, mask);
 
-    ret = model(x, alibi, mask);
-
-    return x, ret
+    return x1, x2
 
 def save_bloomz_7b1_mt():
     from transformers import AutoModelForCausalLM, AutoTokenizer

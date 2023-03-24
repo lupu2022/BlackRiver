@@ -206,6 +206,24 @@ namespace io {
         NWORD_CREATOR_DEFINE_LR(MPIRecv)
     };
 
+    struct NcclRecv : public NativeWord {
+        virtual void run(Stack& stack) {
+            int source = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_nccl_recv(x, source);
+        }
+        NWORD_CREATOR_DEFINE_LR(NcclRecv)
+    };
+
+    struct NcclSend : public NativeWord {
+        virtual void run(Stack& stack) {
+            int dst = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_nccl_send(x, dst);
+        }
+        NWORD_CREATOR_DEFINE_LR(NcclSend)
+    };
+
 }
 
 void load_nn_words(Enviroment& env) {
@@ -213,6 +231,8 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.load", io::Load::creator );
     env.insert_native_word("io.save", io::Save::creator );
     env.insert_native_word("io.mpi.recv", io::MPIRecv::creator );
+    env.insert_native_word("io.nccl.send", io::NcclSend::creator );
+    env.insert_native_word("io.nccl.recv", io::NcclRecv::creator );
 
     env.insert_native_word("op.sync", nn::Sync::creator );
     env.insert_native_word("op.create", nn::Create::creator );
