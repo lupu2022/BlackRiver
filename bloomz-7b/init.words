@@ -127,11 +127,11 @@
 %end
 
 %def load_weight
+    ">>>Begin load weight..." echo
+
     "header" !
      
     {
-        "loading input_layernorm ..." echo
-
         "input_layernorm.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.msg" | 
         io.load
@@ -142,8 +142,6 @@
     }
 
     {
-        "loading query_key_value ..." echo
-
         "query_key_value.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".query_key_value.weight.msg" | 
         io.load
@@ -154,8 +152,6 @@
     }
 
     {
-        "loading dense ..." echo
-
         "dense.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".dense.weight.msg" | 
         io.load
@@ -166,8 +162,6 @@
     }
 
     {
-        "loading dense_h_to_4h ..." echo
-
         "dense_h_to_4h.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.weight.msg" | 
         io.load
@@ -178,8 +172,6 @@
     }
     
     {
-        "loading dense_4h_to_h ..." echo
-
         "dense_4h_to_h.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.weight.msg" | 
         io.load
@@ -190,8 +182,6 @@
     }
 
     {
-        "loading post_attention_layernorm ..." echo
-
         "post_attention_layernorm.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.weight.msg" | 
         io.load
@@ -202,10 +192,13 @@
     }
 
     "header" !!
+
+
+    ">>>End load weight..." echo
 %end
 
 %def sync
-    "Sync with GPU..." echo
+    ">>>Begin sync with GPU..." echo
     
     dup
     
@@ -256,7 +249,8 @@
     swap #     "post_attention_layernorm.bias" @    op.copy
 
     op.sync
-    "Done." echo
+    
+    ">>>End sync with GPU..." echo
 %end
 
 

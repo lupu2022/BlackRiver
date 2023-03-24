@@ -72,11 +72,9 @@ ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_nccl_send(tensor_t self, int dst) {
     if ( DT == DataType::Float ) {
-        ncclGroupStart();
         NCCL_CHECK( ncclSend(data(), self->items(), ncclFloat32, dst,
                              CollectiveContext::nccl_comm,
                              ComputingContext::cuda_stream) );
-        ncclGroupEnd();
         return OP_OK;
     }
 
@@ -86,11 +84,9 @@ ComputingReturn CUDATensor<DT>::io_nccl_send(tensor_t self, int dst) {
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_nccl_recv(tensor_t self, int dst) {
     if ( DT == DataType::Float ) {
-        ncclGroupStart();
         NCCL_CHECK( ncclRecv(data(), self->items(), ncclFloat32, dst,
                              CollectiveContext::nccl_comm,
                              ComputingContext::cuda_stream) );
-        ncclGroupEnd();
         return OP_OK;
     }
 

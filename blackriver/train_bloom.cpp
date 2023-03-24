@@ -53,11 +53,11 @@ int main(int argc, char* argv[] ) {
         std::vector<float> xinput;
         br::load_data("model/xinput.msg", xinput);
 
-        sleep(30);
+        sleep(10);
 
         std::cout << std::endl;
         std::cout << std::endl;
-        std::cout << " ###################### " << std::endl;
+        std::cout << " ########BEGIN SEND XINPUT############## " << std::endl;
         MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );

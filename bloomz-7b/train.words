@@ -73,7 +73,7 @@
     forward
     
     op.sync
-    "xa" @  0 io.nccl.send 
+    "xa" @  1 io.nccl.send 
 %end
 
 %def train_1
@@ -82,7 +82,7 @@
     1 sync
 
     0 # 
-    "xinput" @ 1 io.nccl.recv
+    "xinput" @ 0 io.nccl.recv
     
     forward
     
