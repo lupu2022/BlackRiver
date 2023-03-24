@@ -359,22 +359,19 @@ namespace builtin {
 
 
 void Enviroment::linking(DaG& dag, UserWord& word) {
-    size_t bin_id = dag.binaries_.size();
-    dag.binaries_.push_back( UserBinary() );
-
     auto& builtins_ = dag.builtins_;
     auto& natives_ = dag.natives_;
+    auto& binary_ = dag.binary_;
 
-    UserBinary bin;
     for(size_t i = 0; i < word.size(); i++) {
         auto code = word[i];
         switch( code.type_ ) {
             case WordCode::Number :
-                bin.push_back( WordByte( code.num_ ) );
+                binary_.push_back( WordByte( code.num_ ) );
                 break;
 
             case WordCode::String :
-                bin.push_back( WordByte( code.str_  ) );
+                binary_.push_back( WordByte( code.str_  ) );
                 break;
 
             case WordCode::Builtin :
@@ -393,24 +390,21 @@ void Enviroment::linking(DaG& dag, UserWord& word) {
                     }
                     size_t idx = builtins_.size();
                     builtins_.push_back(op);
-                    bin.push_back( WordByte( WordByte::BuiltinOperator, idx) );
+                    binary_.push_back( WordByte( WordByte::BuiltinOperator, idx) );
                 }
                 break;
 
             case WordCode::Native :
-                bin.push_back( WordByte(WordByte::Native, natives_.size() ));
+                binary_.push_back( WordByte(WordByte::Native, natives_.size() ));
                 natives_.push_back( create_native(code.str_));
                 break;
 
             case WordCode::User :
-                bin.push_back( WordByte(WordByte::User, dag.binaries_.size() ));
                 UserWord& new_word = get_user( code.str_ );
                 linking(dag, new_word);
                 break;
         }
     }
-
-    dag.binaries_[bin_id] = bin;
 }
 
 namespace base {

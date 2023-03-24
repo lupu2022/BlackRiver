@@ -296,7 +296,6 @@ struct WordByte {
         String,
         BuiltinOperator,
         Native,
-        User,
     } type_;
 
     std::string str_;
@@ -354,7 +353,7 @@ private:
     const Enviroment* env_;
 
     // linked and resources
-    std::vector<UserBinary> binaries_;
+    UserBinary binary_;
     std::vector<NativeWord*> natives_;
     std::vector<BuiltinOperator*> builtins_;
 
@@ -389,7 +388,7 @@ struct Enviroment {
     }
     void run(DaG* dag) {
         br_assert( dag->env_ == this, "Can't be here!");
-        run_(dag, 0);
+        run_(dag);
     }
 
     void execute(const std::string& txt) {
@@ -397,7 +396,7 @@ struct Enviroment {
 
         UserWord myCode = compile(txt);
         linking(dag, myCode);
-        run_(&dag, 0);
+        run_(&dag);
     }
 
     Stack& stack() {
@@ -421,13 +420,13 @@ struct Enviroment {
     }
 
 private:
-    void run_(DaG* dag, size_t from) {
-        auto& binaries_ = dag->binaries_;
+    void run_(DaG* dag) {
+        auto& binary_ = dag->binary_;
         auto& builtins_ = dag->builtins_;
         auto& natives_ = dag->natives_;
 
-        for ( size_t i = 0; i < binaries_[from].size(); i++) {
-            auto& byte = binaries_[from][i];
+        for ( size_t i = 0; i < binary_.size(); i++) {
+            auto& byte = binary_[i];
             switch( byte.type_ ) {
                 case WordByte::Number:
                     stack_.push_number( byte.num_ );
@@ -445,10 +444,11 @@ private:
                     natives_[ byte.idx_ ]->run( stack_ );
                     break;
 
-                case WordByte::User:
-                    run_(dag, from + 1);
+                default:
+                    br_panic("Runing binary error can't bere!");
                     break;
             }
+
         }
     }
 
