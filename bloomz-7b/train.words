@@ -63,27 +63,19 @@
     ;; load h0 to cpu 
     1 # 
 
-    "#################### 00000" echo 
-    
     "h0" load_weight        
    
-    "#################### 11111" echo
     ;; sync to cpu
     1 sync
-
-    "#################### 2222" echo
 
     ;; recevied input
     0 #
 
-    "#################### 2222" echo
     "xinput_" @ 0 io.mpi.recv
 
-    "#################### 3333" echo
     "xinput" @ "xinput_" @ op.copy
 
     op.sync
 
     forward
-
 %end

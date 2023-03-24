@@ -43,9 +43,6 @@ void init_env(br::Enviroment* env) {
         env->execute("create_grad");
     }
 
-    env->change(1);
-    env->execute("'h0' load_weight");
-    env->execute("1 sync");
     delete init_wd;
 }
 
@@ -64,19 +61,9 @@ int main(int argc, char* argv[] ) {
 
         init_env(env);
 
-        env->change(0);
-        br::tensor_t xinput = env->hash().find_tensor("xinput");
-        br::tensor_t xinput_ = env->hash().find_tensor("xinput_");
-        xinput_->io_mpi_recv(xinput_, 0);
-        xinput->op_copy(xinput, xinput_);
-
-        {
-            std::string train_code = fileToString("model/train.words");
-            env->execute(train_code);
-            env->execute("op.sync");
-            std::cout << "Executing forward..." << std::endl;
-            env->execute("forward");
-        }
+        std::string train_code = fileToString("model/train.words");
+        env->execute(train_code);
+        env->execute("train_0");
 
         sleep(5);
 
