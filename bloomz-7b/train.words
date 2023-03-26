@@ -58,38 +58,27 @@
 %end
 
 %def train_0
-    ;; load h0 to cpu, and sync to gpu 
-    1 # 
-    "h0" load_weight        
-    1 sync
+    ;; layer 0
+    {
+        1 sync 0 #
+        "xinput_" @ 0 io.mpi.recv
+        "xinput" @ "xinput_" @ op.copy
+        
 
-    ;; recevied input
-    0 #
-
-    "xinput_" @ 0 io.mpi.recv
-
-    "xinput" @ "xinput_" @ op.copy
-
-    forward
+        forward
+        op.sync
+        "xa" @  1 io.nccl.send
+    }
     
-    "xa" @  1 io.nccl.send
-
-    "xinput" @ 1 io.nccl.recv
-
-    forward
-
-    op.sync
+    "xa" @  io.dump
 %end
 
 %def train_1
-    1 # 
-    "h1" load_weight
-    1 sync
-
-    0 # 
-    "xinput" @ 0 io.nccl.recv
-    
-    forward
-    
-    "xa" @ 0 io.nccl.send
+    { 
+        1 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        op.sync
+    }
+    "xa" @ io.dump
 %end

@@ -4,7 +4,6 @@
 
 "model/weights/"   "MSG_FILES_PATH"    !
 
-
 10      "SUB_BATCH"             !
 2048    "TOKEN_LEN"             !
 4096    "HIDDEN_SIZE"           !
@@ -126,8 +125,29 @@
 
 %end
 
+%def zero_grad
+    "input_layernorm.weight_" @  op.zero
+    "input_layernorm.bias_" @ op.zero
+    
+    "query_key_value.weight_" @  op.zero
+    "query_key_value.bias_" @ op.zero
+    
+    "dense.weight_" @ op.zero
+    "dense.bias_" @ op.zero
+    
+    "dense_h_to_4h.weight_" @ op.zero
+    "dense_h_to_4h.bias_" @ op.zero
+    
+    "dense_4h_to_h.weight_" @ op.zero
+    "dense_4h_to_h.bias_" @ op.zero
+    
+    "post_attention_layernorm.weight_" @ op.zero
+    "post_attention_layernorm.bias_" @   op.zero
+%end
+
 %def load_weight
-    ">>>Begin load weight..." echo
+    dup 
+    ">>>Begin load weight..." swap |  echo
 
     "header" !
      

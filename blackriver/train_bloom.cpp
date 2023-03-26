@@ -24,7 +24,10 @@ inline std::string fileToString(const char* filename) {
     return str;
 }
 
-void init_env(br::Enviroment* env) {
+br::Enviroment* create_env(const std::vector<std::string>& layers) {
+    br::Enviroment* env = new br::Enviroment(15 + 1);
+    br::load_nn_words(*env);
+
     std::string init_code = fileToString("model/init.words");
     br::DaG* init_wd = env->build(init_code);
 
@@ -45,7 +48,22 @@ void init_env(br::Enviroment* env) {
         env->execute("create_grad");
     }
 
+    for (size_t i = 1; i < env->hashes_num(); i++) {
+        env->change(i);
+        env->hash().set("$DEVICE", "cpu");
+        env->run( init_wd );
+        env->execute("create_weight");
+        env->execute("create_grad");
+
+
+        std::stringstream ss;
+        ss << i << " # '" + layers[i-1] + "' load_weight";
+        env->execute( ss.str() );
+        env->execute( "zero_grad" );
+    }
+
     delete init_wd;
+    return env;
 }
 
 int main(int argc, char* argv[] ) {
@@ -57,51 +75,37 @@ int main(int argc, char* argv[] ) {
 
         sleep(10);
 
-        std::cout << std::endl;
-        std::cout << std::endl;
-        std::cout << " ########BEGIN SEND XINPUT############## " << std::endl;
-        auto start = std::chrono::high_resolution_clock::now();
         MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
-
-        MPI_Send(&start, sizeof(start), MPI_BYTE, 1, 0, MPI_COMM_WORLD);
-
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-        br::Enviroment* env = new br::Enviroment(15 + 1);
-        br::load_nn_words(*env);
-
-        init_env(env);
+        std::vector<std::string> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
+        br::Enviroment* env = create_env(layers);
 
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
-        env->execute("train_0");
 
-        auto stop = std::chrono::high_resolution_clock::now();
         auto start = std::chrono::high_resolution_clock::now();
-
-        MPI_Recv(&start, sizeof(start), MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+        env->execute("train_0");
+        auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
         std::cout << "Time: " << duration.count() << std::endl;
-        sleep(5);
+
+        sleep(500);
 
         delete env;
 
         br::ComputingContext::shutdown();
     } else if ( br::CollectiveContext::mpi_rank == 2) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-        br::Enviroment* env = new br::Enviroment(15 + 1);
-        br::load_nn_words(*env);
-
-        init_env(env);
+        std::vector<std::string> layers{"h1", "h3", "h5", "h7", "h9", "h11", "h13", "h15", "h17", "h19", "h21", "h23", "h25", "h27", "h29"};
+        br::Enviroment* env = create_env(layers);
 
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
+
         env->execute("train_1");
 
-
-        sleep(5);
+        sleep(500);
 
         delete env;
 
