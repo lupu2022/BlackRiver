@@ -268,7 +268,7 @@
     0 #        "post_attention_layernorm.bias" @
     swap #     "post_attention_layernorm.bias" @    op.copy
 
-    op.sync
+    ;op.sync
     
     ">>>End sync with GPU..." echo
 %end

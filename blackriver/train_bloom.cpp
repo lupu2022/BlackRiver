@@ -73,9 +73,9 @@ int main(int argc, char* argv[] ) {
         std::vector<float> xinput;
         br::load_data("model/xinput.msg", xinput);
 
-        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
-        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
-        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+        for (int i = 0; i < 10; i++) {
+            MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+        }
 
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
@@ -88,9 +88,11 @@ int main(int argc, char* argv[] ) {
         sleep(15);
 
         auto start = std::chrono::high_resolution_clock::now();
-        env->execute("train_0");
-        env->execute("train_0");
-        env->execute("train_0");
+
+        for ( int i = 0; i < 10; i++) {
+            env->execute("train_0");
+        }
+
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "Time: " << duration.count() << std::endl;
@@ -111,9 +113,9 @@ int main(int argc, char* argv[] ) {
 
         sleep(15);
 
-        env->execute("train_1");
-        env->execute("train_1");
-        env->execute("train_1");
+        for ( int i = 0; i < 10; i++) {
+            env->execute("train_1");
+        }
 
         sleep(5);
 
