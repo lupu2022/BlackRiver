@@ -25,7 +25,7 @@ inline std::string fileToString(const char* filename) {
 }
 
 br::Enviroment* create_env(const std::vector<std::string>& layers) {
-    br::Enviroment* env = new br::Enviroment(15 + 1);
+    br::Enviroment* env = new br::Enviroment(layers.size() + 1);
     br::load_nn_words(*env);
 
     std::string init_code = fileToString("model/init.words");
@@ -90,7 +90,7 @@ int main(int argc, char* argv[] ) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "Time: " << duration.count() << std::endl;
 
-        sleep(500);
+        sleep(5);
 
         delete env;
 
@@ -105,7 +105,7 @@ int main(int argc, char* argv[] ) {
 
         env->execute("train_1");
 
-        sleep(500);
+        sleep(5);
 
         delete env;
 
