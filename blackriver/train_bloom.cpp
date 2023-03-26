@@ -73,9 +73,10 @@ int main(int argc, char* argv[] ) {
         std::vector<float> xinput;
         br::load_data("model/xinput.msg", xinput);
 
-        sleep(10);
-
         MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         std::vector<std::string> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
@@ -84,7 +85,11 @@ int main(int argc, char* argv[] ) {
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
 
+        sleep(15);
+
         auto start = std::chrono::high_resolution_clock::now();
+        env->execute("train_0");
+        env->execute("train_0");
         env->execute("train_0");
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
@@ -100,9 +105,14 @@ int main(int argc, char* argv[] ) {
         std::vector<std::string> layers{"h1", "h3", "h5", "h7", "h9", "h11", "h13", "h15", "h17", "h19", "h21", "h23", "h25", "h27", "h29"};
         br::Enviroment* env = create_env(layers);
 
+
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
 
+        sleep(15);
+
+        env->execute("train_1");
+        env->execute("train_1");
         env->execute("train_1");
 
         sleep(5);

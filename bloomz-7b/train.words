@@ -64,13 +64,138 @@
         "xinput_" @ 0 io.mpi.recv
         "xinput" @ "xinput_" @ op.copy
         
-
         forward
-        op.sync
+        ;op.sync
         "xa" @  1 io.nccl.send
     }
+   
+    {
+        2 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @  1 io.nccl.send
+    }
+
+    {
+        3 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
     
-    "xa" @  io.dump
+    {
+        4 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @  1 io.nccl.send
+    }
+
+    {
+        5 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+    
+    {
+        6 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        7 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        8 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        9 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+    
+    {
+        10 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        11 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+    
+    {
+        12 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        13 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+
+    {
+        14 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+    
+    {
+        15 sync 0 #
+        "xinput" @ 1 io.nccl.recv 
+
+        forward
+        ;op.sync
+        "xa" @ 1 io.nccl.send
+    }
+    op.sync
+
 %end
 
 %def train_1
@@ -78,7 +203,137 @@
         1 sync 0 # 
         "xinput" @ 0 io.nccl.recv
         forward
-        op.sync
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
     }
+    
+    { 
+        2 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    { 
+        3 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        4 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    {
+        5 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    {
+        6 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    {
+        7 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    {
+        8 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        9 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        10 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        11 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        12 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    {
+        13 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+
+    {
+        14 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        "xa" @ 0 io.nccl.send
+    }
+    
+    {
+        15 sync 0 # 
+        "xinput" @ 0 io.nccl.recv
+        forward
+        ;op.sync
+        
+        ;"xa" @ 0 io.nccl.send
+    }
+    op.sync
+
     "xa" @ io.dump
+    
 %end
