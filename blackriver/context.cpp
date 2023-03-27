@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "common.hpp"
 #include "context.hpp"
 
@@ -37,6 +39,7 @@ void ComputingContext::shutdown() {
 
 int      CollectiveContext::mpi_world = -1;
 int      CollectiveContext::mpi_rank = -1;
+int      CollectiveContext::current = -1;
 
 ncclUniqueId    CollectiveContext::nccl_id;
 ncclComm_t      CollectiveContext::nccl_comm = nullptr;
@@ -44,6 +47,8 @@ int             CollectiveContext::nccl_rank = -1;
 int             CollectiveContext::nccl_world = -1;
 
 void CollectiveContext::boot(int argc, char* argv[], int gpus) {
+    current = time(nullptr);
+
     MPI_Init(&argc, &argv);
 
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_world);
@@ -73,5 +78,12 @@ void CollectiveContext::shutdown() {
 
     MPI_Finalize();
 }
+
+
+int CollectiveContext::now() {
+    int n = time(nullptr);
+    return n - current;
+}
+
 
 }

@@ -1,3 +1,4 @@
+#include "context.hpp"
 #include "tensortype.hpp"
 #include "dag.hpp"
 
@@ -506,7 +507,7 @@ namespace base {
     struct Echo : public NativeWord {
         virtual void run(Stack& stack) {
             auto msg = stack.pop_string();
-            std::cout << msg << std::endl;
+            std::cout << CollectiveContext::mpi_rank << ":" << CollectiveContext::now()  << "\t" <<  msg << std::endl;
         }
         NWORD_CREATOR_DEFINE_LR(Echo)
     };

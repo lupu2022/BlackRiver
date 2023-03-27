@@ -20,6 +20,7 @@ struct ComputingContext {
 };
 
 struct CollectiveContext {
+    static int      current;
     static int      mpi_world;
     static int      mpi_rank;
 
@@ -30,6 +31,7 @@ struct CollectiveContext {
 
     static void boot(int argc, char* argv[], int gpus);
     static void shutdown();
+    static int now();
 };
 
 } // end of namespace br
