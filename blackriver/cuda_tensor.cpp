@@ -56,7 +56,7 @@ template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
     if ( DT == DataType::Float ) {
         std::vector<float> src;
-        load_data(fileName, src);
+        read_data(fileName, src);
 
         br_assert(src.size() == self->items() , "loaded data must has same size");
         void* x = src.data();

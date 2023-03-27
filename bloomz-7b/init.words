@@ -4,6 +4,7 @@
 
 "model/weights/"   "MSG_FILES_PATH"    !
 
+2000    "FULL_BATCH"            !
 40      "SUB_BATCH"             !
 512     "TOKEN_LEN"             !
 4096    "HIDDEN_SIZE"           !
@@ -12,11 +13,25 @@
 12288   "HIDDEN_SIZE_x3"        !
 16384   "HIDDEN_SIZE_x4"        !
 
+250880  "VOCAB_SIZE"            !
+
 "HIDDEN_SIZE" @ dup * "HIDDEN_SQUARE" ! 
 
 ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ * * ) "X_SIZE" !
 
 "X_SIZE" @ 5 *  "QUERYKEY_OFFSET" !
+
+%def create_output
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias"    !
+    
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) op.create "lm_head.weight" !
+    
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias_g"    !
+
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) op.create "lm_head.weight_g" !
+%end
 
 %def create_weight
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight"  !
@@ -47,35 +62,34 @@
 
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias"    !
-
 %end
 
 %def create_grad
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight_"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias_"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias_g"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight_"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias_"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias_g"    !
 
-    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight_"  !
-    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                       "query_key_value.bias_"    !
+    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight_g"  !
+    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                       "query_key_value.bias_g"    !
 
-    ("query_key_value.weight_" @ 0                        "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight_" !
-    ("query_key_value.weight_" @ "HIDDEN_SQUARE" @        "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight_" !          
-    ("query_key_value.weight_" @ ("HIDDEN_SQUARE" @ 2 *)  "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight_" !
+    ("query_key_value.weight_g" @ 0                        "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight_g" !
+    ("query_key_value.weight_g" @ "HIDDEN_SQUARE" @        "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight_g" !          
+    ("query_key_value.weight_g" @ ("HIDDEN_SQUARE" @ 2 *)  "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight_g" !
 
-    ("query_key_value.bias_" @ 0                      "HIDDEN_SIZE" @ 1 op.view) "query.bias_" !
-    ("query_key_value.bias_" @ "HIDDEN_SIZE" @        "HIDDEN_SIZE" @ 1 op.view) "key.bias_"   !
-    ("query_key_value.bias_" @ ("HIDDEN_SIZE" @ 2 *)  "HIDDEN_SIZE" @ 1 op.view) "value.bias_" !
+    ("query_key_value.bias_g" @ 0                      "HIDDEN_SIZE" @ 1 op.view) "query.bias_g" !
+    ("query_key_value.bias_g" @ "HIDDEN_SIZE" @        "HIDDEN_SIZE" @ 1 op.view) "key.bias_g"   !
+    ("query_key_value.bias_g" @ ("HIDDEN_SIZE" @ 2 *)  "HIDDEN_SIZE" @ 1 op.view) "value.bias_g" !
 
-    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight_"  !
-    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias_"    !
+    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight_g"  !
+    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias_g"    !
 
-    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight_"  !
-    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias_"    !
+    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight_g"  !
+    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias_g"    !
 
-    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight_"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias_"    !
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias_g"    !
 %end
 
 %def create_var
@@ -91,7 +105,7 @@
     ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   $DEVICE @ op.create)  "xmask"   !
 
     ;
-    ;   total 8M free memory
+    ;   total 8G free memory
     ;
     (2415919104 1 $DEVICE @ op.create)  "var" !
 
@@ -123,26 +137,28 @@
     ;; put qv to bottom of memeory
     ("var" @ "QUERYKEY_OFFSET" @  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "TOKEN_LEN" @ 4) op.view) "xll" !
 
+    ;; output layer
+    ("var" @ "QUERYKEY_OFFSET" @  ("VOCAB_SIZE" @ "TOKEN_LEN" @ 2) op.view) "lm_head" !
 %end
 
 %def zero_grad
-    "input_layernorm.weight_" @  op.zero
-    "input_layernorm.bias_" @ op.zero
+    "input_layernorm.weight_g" @  op.zero
+    "input_layernorm.bias_g" @ op.zero
     
-    "query_key_value.weight_" @  op.zero
-    "query_key_value.bias_" @ op.zero
+    "query_key_value.weight_g" @  op.zero
+    "query_key_value.bias_g" @ op.zero
     
-    "dense.weight_" @ op.zero
-    "dense.bias_" @ op.zero
+    "dense.weight_g" @ op.zero
+    "dense.bias_g" @ op.zero
     
-    "dense_h_to_4h.weight_" @ op.zero
-    "dense_h_to_4h.bias_" @ op.zero
+    "dense_h_to_4h.weight_g" @ op.zero
+    "dense_h_to_4h.bias_g" @ op.zero
     
-    "dense_4h_to_h.weight_" @ op.zero
-    "dense_4h_to_h.bias_" @ op.zero
+    "dense_4h_to_h.weight_g" @ op.zero
+    "dense_4h_to_h.bias_g" @ op.zero
     
-    "post_attention_layernorm.weight_" @ op.zero
-    "post_attention_layernorm.bias_" @   op.zero
+    "post_attention_layernorm.weight_g" @ op.zero
+    "post_attention_layernorm.bias_g" @   op.zero
 %end
 
 %def load_weight
@@ -153,61 +169,61 @@
      
     {
         "input_layernorm.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.bin" | 
         io.load
    
         "input_layernorm.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.bias.bin" | 
         io.load
     }
 
     {
         "query_key_value.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.weight.bin" | 
         io.load
    
         "query_key_value.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".query_key_value.bias.bin" | 
         io.load
     }
 
     {
         "dense.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense.weight.bin" | 
         io.load
    
         "dense.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense.bias.bin" | 
         io.load
     }
 
     {
         "dense_h_to_4h.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.weight.bin" | 
         io.load
    
         "dense_h_to_4h.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense_h_to_4h.bias.bin" | 
         io.load
     }
     
     {
         "dense_4h_to_h.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.weight.bin" | 
         io.load
    
         "dense_4h_to_h.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".dense_4h_to_h.bias.bin" | 
         io.load
     }
 
     {
         "post_attention_layernorm.weight" @
-        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.weight.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.weight.bin" | 
         io.load
    
         "post_attention_layernorm.bias" @
-        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.bias.msg" | 
+        "MSG_FILES_PATH" @  "header" @  | ".post_attention_layernorm.bias.bin" | 
         io.load
     }
 
@@ -216,6 +232,30 @@
 
     ">>>End load weight..." echo
 %end
+
+
+%def load_output
+    ">>>Begin load output ..." echo   
+   
+    {
+        "ln_f.weight" @ 
+        "MSG_FILES_PATH" @  "ln_f.weight.bin" | 
+        io.load
+
+        "ln_f.bias" @
+        "MSG_FILES_PATH" @  "ln_f.bias.bin" | 
+        io.load
+    }
+
+    "lm_head.weight" @
+    "MSG_FILES_PATH" @  "lm_head.weight.bin" | 
+    io.load
+
+    ">>>End load output ..." echo   
+%end
+
+
+
 
 %def sync
     ">>>Begin sync with GPU..." echo

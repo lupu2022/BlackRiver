@@ -26,7 +26,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from torch.nn import functional as F
 
-def test2():
+def test():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     config = LLMConfig();
@@ -51,44 +51,6 @@ def test2():
         x = x[0]
 
     return x;
-
-
-def test():
-    config = LLMConfig();
-
-    h0 = BloomBlock(config);
-    h1 = BloomBlock(config);
-    h2 = BloomBlock(config);
-    h3 = BloomBlock(config);
-
-    path = "pth/"
-    hname = "h_0.pth";
-    h0.load_state_dict( torch.load(path + hname) );
-    hname = "h_1.pth";
-    h1.load_state_dict( torch.load(path + hname) );
-
-    hname = "h_2.pth";
-    h2.load_state_dict( torch.load(path + hname) );
-    hname = "h_3.pth";
-    h3.load_state_dict( torch.load(path + hname) );
-
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
-    x = torch.load("xinput.pth")["x"];
-
-    heads = config.n_head;
-    (batch, tokens, _) = x.shape;
-
-    mask = torch.ones(batch, tokens);
-    alibi = build_alibi_tensor(mask, heads, mask.dtype);
-    mask = _expand_mask(mask, tokens);
-
-    x = h0(x, alibi, mask);
-    x = h1(x[0], alibi, mask);
-    x = h2(x[0], alibi, mask);
-    x = h3(x[0], alibi, mask);
-
-    return x
 
 def save_bloomz_7b1_mt():
     from transformers import AutoModelForCausalLM, AutoTokenizer

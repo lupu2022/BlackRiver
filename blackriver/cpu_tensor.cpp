@@ -1,5 +1,4 @@
 #include <chrono>
-#include <msgpack.hpp>
 
 #include "common.hpp"
 #include "context.hpp"
@@ -87,11 +86,14 @@ ComputingReturn CPUTensor<_DTYPE_>::io_save(tensor_t self, const char* fileName)
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName) {
     if ( _DTYPE_ == DataType::Float ) {
-        std::vector<float> src;
-        load_data(fileName, src);
-
-        br_assert(src.size() == self->items() , "loaded data must has same size");
-        memcpy(data(), src.data(), self->items() * sizeof(float));
+        const size_t count = 1024;
+        std::ifstream inf(fileName, std::ios::binary);
+        br_assert( self->items() % count == 0, "Only support block read");
+        for(size_t i = 0; i < self->items() / count; i++) {
+            float * src = (float *)data() + i * count;
+            inf.read( (char *)src , sizeof(float) * count);
+        }
+        inf.close();
         return OP_OK;
     }
     return OP_TODO_ERROR;

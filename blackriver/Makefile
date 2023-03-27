@@ -6,7 +6,6 @@ all: $(TARGET)
 FLAGS = -Wall -O3 -Wno-maybe-uninitialized 
 INC = -I. -I/engine/includes \
 	  -I/home/teaonly/opt/nccl/include \
-	  -I/home/teaonly/opt/msgpack \
 	  -I/usr/local/cuda/include \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi 

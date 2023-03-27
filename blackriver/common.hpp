@@ -11,7 +11,6 @@
 #include <cuda_runtime.h>
 #include <mpi.h>
 #include <nccl.h>
-#include <msgpack.hpp>
 
 #define COMPLAIN_ERROR_AND_EXIT(what, status) \
     do { \
@@ -81,31 +80,18 @@ inline void _M_Panic(const char* file, int line, const char* msg) {
     abort();
 }
 
-template<typename T>
-void load_data(const char* weights_file, std::vector<T> &allPerform) {
-    std::ifstream t(weights_file, std::ios::binary);
+inline void read_data(const char* fileName, std::vector<float>& dout) {
+    std::ifstream inf(fileName, std::ios::binary);
+    inf.seekg(0, inf.end);
+    size_t length = inf.tellg();
+    inf.seekg(0, inf.beg);
 
-    t.seekg(0, std::ios::end);
-    size_t totalSize = t.tellg();
-    t.seekg(0, std::ios::beg);
-
-    char* memblock;
-    memblock = new char [totalSize];
-    t.read(memblock, totalSize);
-    t.close();
-
-    try {
-        auto oh = msgpack::unpack((const char*)memblock, totalSize);
-        allPerform = oh.get().as<std::vector<T>>();
-        delete memblock;
-    }
-    catch (...) {
-        std::cout << "Unpack weight error!" << std::endl;
-        assert(false);
-    }
+    dout.resize( length / sizeof(float) );
+    inf.read((char *)dout.data(), length);
+    inf.close();
 }
 
-
 }
+
 #endif
 
