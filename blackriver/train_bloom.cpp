@@ -47,12 +47,10 @@ br::Enviroment* create_env(const std::vector<std::string>& layers, bool withOutp
         env->execute("create_weight");
         env->execute("create_grad");
 
-        /*
         if ( withOutput && (i == layers.size()) ) {
             env->execute("create_output");
             env->execute("load_output");
         }
-        */
 
         std::stringstream ss;
         ss << i << " # '" + layers[i-1] + "' load_weight";
@@ -78,7 +76,7 @@ int main(int argc, char* argv[] ) {
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         std::vector<std::string> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
-        br::Enviroment* env = create_env(layers, false);
+        br::Enviroment* env = create_env(layers, true);
 
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
@@ -103,7 +101,7 @@ int main(int argc, char* argv[] ) {
     } else if ( br::CollectiveContext::mpi_rank == 2) {
         //br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
         std::vector<std::string> layers{"h1", "h3", "h5", "h7", "h9", "h11", "h13", "h15", "h17", "h19", "h21", "h23", "h25", "h27", "h29"};
-        br::Enviroment* env = create_env(layers, true);
+        br::Enviroment* env = create_env(layers, false);
 
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);

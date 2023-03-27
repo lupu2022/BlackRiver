@@ -194,8 +194,21 @@
         ;op.sync
         "xa" @ 1 io.nccl.send
     }
+ 
+    ;; output layer 
+    {
+        15 sync_output 0 #
+        
+        "xinput" @ 1 io.nccl.recv 
+        
+        "xinput" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xa" @ op.layernorm
+        
+        ;; TODO
+    }
     op.sync
-
+    
+    "xa" @ io.dump
+    
 %end
 
 %def train_1
@@ -330,10 +343,8 @@
         forward
         ;op.sync
         
-        ;"xa" @ 0 io.nccl.send
+        "xa" @ 0 io.nccl.send
     }
     op.sync
 
-    "xa" @ io.dump
-    
 %end

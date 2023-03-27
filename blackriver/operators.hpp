@@ -82,6 +82,9 @@ struct TransformerComputing {
     virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_predict(tensor_t self, tensor_t lm_head, tensor_t dst) {
+        return OP_TODO_ERROR;
+    }
 };
 
 

@@ -31,6 +31,7 @@
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias_g"    !
 
     ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) op.create "lm_head.weight_g" !
+
 %end
 
 %def create_weight
@@ -62,6 +63,9 @@
 
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias"    !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias"    !
 %end
 
 %def create_grad
@@ -90,6 +94,9 @@
 
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight_g"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias_g"    !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias_g"    !
 %end
 
 %def create_var
@@ -127,7 +134,8 @@
     ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zc" !
     ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zd" !
     ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "ze" !
-   
+  
+
     ;;
     ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3a" ! 
     ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3b" ! 
@@ -138,7 +146,8 @@
     ("var" @ "QUERYKEY_OFFSET" @  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "TOKEN_LEN" @ 4) op.view) "xll" !
 
     ;; output layer
-    ("var" @ "QUERYKEY_OFFSET" @  ("VOCAB_SIZE" @ "TOKEN_LEN" @ 2) op.view) "lm_head" !
+    ("var" @ "QUERYKEY_OFFSET" @  ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2) op.view) "lm_head.weight" !
+
 %end
 
 %def zero_grad
@@ -254,7 +263,20 @@
     ">>>End load output ..." echo   
 %end
 
+%def sync_output
+    dup 
 
+    0 # "ln_f.weight" @ 
+    swap # "ln_f.weight" @ op.copy 
+    dup    
+
+    0 # "ln_f.bias" @ 
+    swap # "ln_f.bias" @ op.copy 
+    
+    0 # "lm_head.weight" @
+    swap # "lm_head.weight" @ op.copy 
+
+%end
 
 
 %def sync
