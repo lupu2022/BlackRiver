@@ -4,8 +4,8 @@
 
 "model/weights/"   "MSG_FILES_PATH"    !
 
-10      "SUB_BATCH"             !
-2048    "TOKEN_LEN"             !
+40      "SUB_BATCH"             !
+512     "TOKEN_LEN"             !
 4096    "HIDDEN_SIZE"           !
 32      "HEADS_NUM"             !
 128     "HEAD_HIDDEN"           !
