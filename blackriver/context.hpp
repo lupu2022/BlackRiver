@@ -34,6 +34,17 @@ struct CollectiveContext {
     static int now();
 };
 
+struct MemoryContext {
+    static const size_t page_size;
+    static void*    root;
+    static size_t   total_size;
+    static size_t   currentp;
+
+    static void* alloc(size_t blk_size);
+    static void boot(size_t total_bytes);
+    static void shutdown();
+};
+
 } // end of namespace br
 
 

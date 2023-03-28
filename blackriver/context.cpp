@@ -37,6 +37,8 @@ void ComputingContext::shutdown() {
     CUDA_CHECK( cudaStreamDestroy(cuda_stream) );
 }
 
+/**************************************************************/
+
 int      CollectiveContext::mpi_world = -1;
 int      CollectiveContext::mpi_rank = -1;
 int      CollectiveContext::current = -1;
@@ -83,6 +85,36 @@ void CollectiveContext::shutdown() {
 int CollectiveContext::now() {
     int n = time(nullptr);
     return n - current;
+}
+
+/**************************************************************/
+
+const size_t MemoryContext::page_size = 4096;
+void* MemoryContext::root = nullptr;
+size_t MemoryContext::total_size = 0;
+size_t MemoryContext::currentp = 0;
+
+void MemoryContext::boot(size_t total_bytes) {
+    total_size = total_bytes;
+    root = malloc(total_bytes);
+    currentp = 0;
+}
+
+void MemoryContext::shutdown() {
+    std::cout << CollectiveContext::mpi_rank << " ############## " << total_size << " " << currentp << std::endl;
+    free(root);
+}
+
+void* MemoryContext::alloc(size_t blk_size) {
+    br_assert(blk_size % page_size == 0, "block size must page aligend");
+    if ( blk_size + currentp > total_size ) {
+        std::cout << CollectiveContext::mpi_rank << ": " <<  currentp << " " << blk_size << std::endl;
+        br_panic("Can't allocate memory, out of pre-allocating");
+    }
+
+    void* ret = (unsigned char*)root + currentp;
+    currentp = currentp + blk_size;
+    return ret;
 }
 
 
