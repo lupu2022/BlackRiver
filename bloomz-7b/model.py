@@ -43,14 +43,15 @@ def test():
 
     checkpoint = "bigscience/bloomz-7b1-mt"
     model = AutoModelForCausalLM.from_pretrained(checkpoint)
-    model = model.transformer.h
 
-    for block in model:
+    for block in model.transformer.h:
         print(">>>>>>>>>>>>>")
         x = block(x, alibi, mask);
         x = x[0]
 
-    return x;
+    x = model.transformer.ln_f(x)
+
+    return model, x;
 
 def save_bloomz_7b1_mt():
     from transformers import AutoModelForCausalLM, AutoTokenizer
