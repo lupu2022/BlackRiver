@@ -77,6 +77,7 @@ int main(int argc, char* argv[] ) {
 
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         br::MemoryContext::boot( MEM_CTX_SIZE + 7l*1024*1024*1024 );
+        br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
 
         std::vector<std::string> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
         br::Enviroment* env = create_env(layers, true);
@@ -104,6 +105,7 @@ int main(int argc, char* argv[] ) {
         br::MemoryContext::shutdown();
     } else if ( br::CollectiveContext::mpi_rank == 2) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
+        br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
 
         std::vector<std::string> layers{"h1", "h3", "h5", "h7", "h9", "h11", "h13", "h15", "h17", "h19", "h21", "h23", "h25", "h27", "h29"};
         br::Enviroment* env = create_env(layers, false);

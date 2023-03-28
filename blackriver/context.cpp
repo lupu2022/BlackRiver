@@ -31,6 +31,7 @@ void ComputingContext::boot(int cud) {
 }
 
 void ComputingContext::shutdown() {
+    CUDA_CHECK( cudaFree(cuda_workspace) );
     CUDNN_CHECK( cudnnDestroy(cudnn_handle) );
     CUBLAS_CHECK( cublasLtDestroy(cublasLt_handle) );
     CUBLAS_CHECK( cublasDestroy(cublas_handle) );
@@ -67,7 +68,8 @@ void CollectiveContext::boot(int argc, char* argv[], int gpus) {
         nccl_world = gpus;
         nccl_rank = mpi_rank - 1;
 
-        ComputingContext::boot(nccl_rank);
+        //ComputingContext::boot(nccl_rank);
+        CUDA_CHECK( cudaSetDevice(nccl_rank) );
 
         NCCL_CHECK(ncclCommInitRank(&nccl_comm, nccl_world, nccl_id, nccl_rank));
     }
@@ -81,14 +83,12 @@ void CollectiveContext::shutdown() {
     MPI_Finalize();
 }
 
-
 int CollectiveContext::now() {
     int n = time(nullptr);
     return n - current;
 }
 
 /**************************************************************/
-
 const size_t MemoryContext::page_size = 4096;
 void* MemoryContext::root = nullptr;
 size_t MemoryContext::total_size = 0;
