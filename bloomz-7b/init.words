@@ -4,22 +4,14 @@
 
 "model/weights/"   "MSG_FILES_PATH"    !
 
-2000    "FULL_BATCH"            !
-40      "SUB_BATCH"             !
-512     "TOKEN_LEN"             !
-4096    "HIDDEN_SIZE"           !
-32      "HEADS_NUM"             !
-128     "HEAD_HIDDEN"           !
-12288   "HIDDEN_SIZE_x3"        !
-16384   "HIDDEN_SIZE_x4"        !
+250880                  "VOCAB_SIZE"            !
+4096                    "HIDDEN_SIZE"           !
+32                      "HEADS_NUM"             !
+128                     "HEAD_HIDDEN"           !
 
-250880  "VOCAB_SIZE"            !
-
-"HIDDEN_SIZE" @ dup * "HIDDEN_SQUARE" ! 
-
-("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ * * ) "X_SIZE" !
-
-"X_SIZE" @ 5 *  "QUERYKEY_OFFSET" !
+"HIDDEN_SIZE" @ 3 *     "HIDDEN_SIZE_x3"        !
+"HIDDEN_SIZE" @ 4 *     "HIDDEN_SIZE_x4"        !
+"HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
 %def create_output
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight"  !
@@ -100,54 +92,9 @@
 %end
 
 %def create_var
-    ; some const memroy
-    ("SUB_BATCH" @ "HEADS_NUM" @  1 "TOKEN_LEN" @  4 $DEVICE @ op.create)  "alibi"   !
-    "alibi" @ op.build_alibi
-
-    ; input variable
-    ("SUB_BATCH" @ "TOKEN_LEN" @  "HIDDEN_SIZE" @ 3   "cpu"  op.create)  "xinput_"  !   
-    ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   "cpu"  op.create)  "xmask_"   !   
-
-    ("SUB_BATCH" @ "TOKEN_LEN" @  "HIDDEN_SIZE" @ 3   $DEVICE @ op.create)  "xinput"  !
-    ("SUB_BATCH" @ "TOKEN_LEN" @  "TOKEN_LEN"  @  3   $DEVICE @ op.create)  "xmask"   !
-
-    ;
-    ;   total 8G free memory
-    ;
-    (2415919104 1 $DEVICE @ op.create)  "var" !
-
-    ;;
-    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xa" !
-    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xb" !
-    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xc" !
-    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xd" !
-    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE" @ 3) op.view  "xe" !
-
-    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "ya" !
-    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yb" !
-    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yc" !
-    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "yd" !
-    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4) op.view  "ye" !
-
-    ("var" @ 0                  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "za" !
-    ("var" @ "X_SIZE" @         ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zb" !
-    ("var" @ ("X_SIZE" @ 2 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zc" !
-    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "zd" !
-    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "HEAD_HIDDEN" @ 4) op.view  "ze" !
-  
-
-    ;;
-    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3a" ! 
-    ("var" @ ("X_SIZE" @ 3 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x3" @ 3) op.view) "x3b" ! 
-    ("var" @ 0                  ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x4" @ 3) op.view) "x4a" ! 
-    ("var" @ ("X_SIZE" @ 4 *)   ("SUB_BATCH" @ "TOKEN_LEN" @ "HIDDEN_SIZE_x4" @ 3) op.view) "x4b" ! 
-
-    ;; put qv to bottom of memeory
-    ("var" @ "QUERYKEY_OFFSET" @  ("SUB_BATCH" @ "HEADS_NUM" @ "TOKEN_LEN" @ "TOKEN_LEN" @ 4) op.view) "xll" !
-
-    ;; output layer
-    ("var" @ "QUERYKEY_OFFSET" @  ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2) op.view) "lm_head.weight" !
-
+    1 "cpu"  op.create  "_xmask_"   !   
+    1 "cpu"  op.create  "_xinput_"  !   
+    1 "cuda" op.create  "_var_"     !
 %end
 
 %def zero_grad

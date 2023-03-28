@@ -101,7 +101,6 @@ void MemoryContext::boot(size_t total_bytes) {
 }
 
 void MemoryContext::shutdown() {
-    std::cout << CollectiveContext::mpi_rank << " ############## " << total_size << " " << currentp << std::endl;
     free(root);
 }
 
