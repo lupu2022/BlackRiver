@@ -29,7 +29,7 @@ void load_data(const char* weights_file, std::vector<T> &allPerform) {
 int main( int argc, const char* argv[]) {
     std::cout << "Converting from " << argv[1] << " to " << argv[2] << std::endl;
 
-    std::vector<float> data;
+    std::vector<int> data;
     load_data(argv[1], data);
 
     std::ofstream os(argv[2], std::ios::binary);

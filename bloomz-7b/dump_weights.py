@@ -70,12 +70,12 @@ def dump_transformer():
     sdict = torch.load(path_src + "word_embeddings_layernorm.pth");
     vlist = sdict["weight"].float().numpy().flatten().tolist()
     d = msgpack.packb(vlist, use_bin_type=True);
-    with open( path_dst + "embeddings_layernorm.weight.msg", "wb") as outfile:
+    with open( path_dst + "word_embeddings_layernorm.weight.msg", "wb") as outfile:
         outfile.write(d)
 
     vlist = sdict["bias"].float().numpy().flatten().tolist()
     d = msgpack.packb(vlist, use_bin_type=True);
-    with open( path_dst + "embeddings_layernorm.bias.msg", "wb") as outfile:
+    with open( path_dst + "word_embeddings_layernorm.bias.msg", "wb") as outfile:
         outfile.write(d)
     '''
 

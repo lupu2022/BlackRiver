@@ -235,15 +235,17 @@ br::Enviroment* create_env(const std::vector<std::string>& layers, bool withOutp
         env->execute("create_weight");
         env->execute("create_grad");
 
+        std::stringstream ss;
+        ss << "'" + layers[i-1] + "' load_weight";
+        env->execute( ss.str() );
+        env->execute( "zero_grad" );
+
         if ( withOutput && (i == layers.size()) ) {
             env->execute("create_output");
             env->execute("load_output");
         }
 
-        std::stringstream ss;
-        ss << i << " # '" + layers[i-1] + "' load_weight";
-        env->execute( ss.str() );
-        env->execute( "zero_grad" );
+
     }
 
     delete init_wd;
@@ -259,7 +261,7 @@ int main(int argc, char* argv[] ) {
         std::vector<float> xinput;
         br::read_data("model/xinput.bin", xinput);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
         }
 
@@ -277,7 +279,7 @@ int main(int argc, char* argv[] ) {
 
         sleep(15);
         auto start = std::chrono::high_resolution_clock::now();
-        for ( int i = 0; i < 10; i++) {
+        for ( int i = 0; i < 2; i++) {
             env->execute("train_0");
         }
         auto stop = std::chrono::high_resolution_clock::now();
@@ -301,7 +303,7 @@ int main(int argc, char* argv[] ) {
         create_dynamic(env, 40, 512);
 
         sleep(15);
-        for ( int i = 0; i < 10; i++) {
+        for ( int i = 0; i < 2; i++) {
             env->execute("train_1");
         }
 
