@@ -58,6 +58,20 @@
 %end
 
 %def train_0
+    ;; receiving ids, mask, alibi
+    {
+        0 #
+        
+        "ids_" @ 0 io.mpi.bcast
+        "ids" @ "ids_" @ op.copy
+        
+        "mask_" @ 0 io.mpi.bcast
+        "mask" @ "mask_" @ op.copy
+    
+        "xmask_" @ 0 io.mpi.bcast
+        "xmask" @ "xmask_" @ op.copy
+    }
+
     ;; layer 0
     {
         1 sync 0 #
@@ -212,9 +226,26 @@
 %end
 
 %def train_1
+    ;; receiving ids, mask, alibi
+    {
+        0 #
+        
+        "ids_" @ 0 io.mpi.bcast
+        "ids" @ "ids_" @ op.copy
+        
+        "mask_" @ 0 io.mpi.bcast
+        "mask" @ "mask_" @ op.copy
+    
+        "xmask_" @ 0 io.mpi.bcast
+        "xmask" @ "xmask_" @ op.copy
+    }
+
     { 
         1 sync 0 # 
-        "xinput" @ 0 io.nccl.recv
+        "xa" @ 0 io.nccl.recv
+        
+        "xa" @ "xb" @ "xc" @ "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ op.layernorm
+
         forward
         ;op.sync
         

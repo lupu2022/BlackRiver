@@ -114,6 +114,12 @@ ComputingReturn TensorType::io_dump(tensor_t self) {
     op_check(ret, "dump");
 }
 
+ComputingReturn TensorType::io_mpi_bcast(tensor_t self, int root) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_mpi_bcast(self, root);
+    op_check(ret, "mpi_bcast");
+}
+
 ComputingReturn TensorType::io_mpi_recv(tensor_t self, int source) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->io_mpi_recv(self, source);

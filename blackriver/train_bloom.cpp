@@ -34,22 +34,19 @@ inline std::string fileToString(const char* filename) {
 struct BloomInput {
     BloomInput() {
         br::read_data("model/weights/word_embeddings.weight.bin", vocab);
-        br::read_data("model/weights/word_embeddings_layernorm.weight.bin", ln_weight);
-        br::read_data("model/weights/word_embeddings_layernorm.bias.bin", ln_bias);
     }
     ~BloomInput() {
     }
 
-    std::tuple<int, int> fetch_data(std::vector<float>& xinput, std::vector<float>& mask_all) {
-
+    std::tuple<int, int> fetch_data(std::vector<int>& ids, std::vector<int>& mask, std::vector<float>& xinput, std::vector<float>& xmask) {
         const size_t batch = 4;
         const size_t tokens = 512;
 
-        std::vector<int>    ids;
-        std::vector<float>  mask;
+        // fill ids&masks
         br::read_data("model/xinput.ids.bin", ids);
         br::read_data("model/xinput.mask.bin", mask);
 
+        // load embeddings
         xinput.resize(batch * tokens * HIDDEN_SIZE);
         for (size_t i = 0; i < ids.size(); i++) {
             size_t id = ids[i];
@@ -58,17 +55,52 @@ struct BloomInput {
             memcpy(dst, embedding, HIDDEN_SIZE * sizeof(float) );
         }
 
-        // change mask to mask_all
+        // building xmask
+        xmask.resize(1l * batch * tokens * tokens );
+        std::fill(xmask.begin(), xmask.end(), 0.0);
+        for (size_t i = 0; i < batch; i++) {
+            const int* ms = &mask[i * tokens];
+            float* m2d = &xmask[ i * tokens * tokens ];
 
-        return {4, 512};
+            for (size_t m = 0; m < tokens; m++) {
+                for( size_t n = 0; n <= m; n++) {
+                    if ( ms[n] != 1) {
+                        m2d[m * tokens + n] = 1.0;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return {batch, tokens};
+    }
+
+    void sub_batch() {
+        std::vector<int> ids;
+        std::vector<int> mask;
+        std::vector<float> xinput;
+        std::vector<float> xmask;
+
+        auto ret = fetch_data(ids, mask, xinput, xmask);
+        int batch = std::get<0>(ret);
+        int tokens = std::get<1>(ret);
+
+        // broadcast common data
+        MPI_Bcast(&batch, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&tokens, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        MPI_Bcast(ids.data(), ids.size(), MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(mask.data(), mask.size(), MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(xmask.data(), xmask.size(), MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+        // sending to first layer
+        MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
     }
 
 public:
     std::vector<float> vocab;
-    std::vector<float> ln_weight;
-    std::vector<float> ln_bias;
 };
-
 
 struct BloomAttentions {
     BloomAttentions(const std::vector<const char*>& layers) : layers_(layers) {
@@ -86,10 +118,13 @@ struct BloomAttentions {
         env_->execute("create_grad");
 
         size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
-        size_t max_input = 16l * 2048 * 4096;
-        size_t max_masks = 16l * 2048 * 2048;
+
+        size_t max_tokens = 16l * 2048;
+        size_t max_input  = 16l * 2048 * HIDDEN_SIZE;
+        size_t max_xmask  = 16l * 2048 * 2048;
+
         std::stringstream ss;
-        ss << total_var << " " <<  max_input << " " << max_masks << " create_var";
+        ss << total_var << " " <<  max_input << " " << max_xmask << " " << max_tokens << " create_var";
         env_->execute( ss.str() );
 
         // others is used in CPU
@@ -125,8 +160,39 @@ struct BloomAttentions {
     void create_dynamic(size_t batch, size_t tokens) {
         env_->change(0);
 
-
         size_t pos = 0;
+        // ids in GPU, ids_ in CPU
+        {
+            std::stringstream ss;
+            ss << "'_var_' @ " << pos << " [" << batch << " " << tokens << "] op.view ";
+            ss << " 'ids' !";
+            ss << std::endl;
+
+            ss << "'_ids_' @  0 [" << batch << " " << tokens << "] op.view ";
+            ss << " 'ids_' !";
+            ss << std::endl;
+
+            env_->execute( ss.str() );
+
+            pos = pos + batch * tokens;
+        }
+
+        // mask in GPU, mask_ in CPU
+        {
+            std::stringstream ss;
+            ss << "'_var_' @ " << pos << " [" << batch << " " << tokens << "] op.view ";
+            ss << " 'mask' !";
+            ss << std::endl;
+
+            ss << "'_mask_' @  0 [" << batch << " " << tokens << "] op.view ";
+            ss << " 'mask_' !";
+            ss << std::endl;
+
+            env_->execute( ss.str() );
+
+            pos = pos + batch * tokens;
+        }
+
         // xinput in GPU, xinput_ in CPU
         {
             std::stringstream ss;
@@ -163,7 +229,7 @@ struct BloomAttentions {
         {
             std::stringstream ss;
             ss << "'_var_' @ " << pos << " [" << batch << " " << HEADS_NUM << "  1 " << tokens << "] op.view ";
-            ss << " dup 'alibi' !  op.build_alibi ";
+            ss << " dup 'alibi' ! op.build_alibi";
             ss << std::endl;
 
             env_->execute( ss.str() );
@@ -300,7 +366,14 @@ struct BloomAttentions {
         }
     }
 
-    void do_train(int batch, int tokens) {
+    void forward_backward() {
+        int batch = -1;
+        int tokens = -1;
+        MPI_Bcast(&batch, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&tokens, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        std::cout << "################### " << batch << " " << tokens << std::endl;
+
         create_dynamic(batch, tokens);
         if ( br::CollectiveContext::nccl_rank == 0) {
             env_->execute("train_0");
@@ -308,6 +381,7 @@ struct BloomAttentions {
             env_->execute("train_1");
         }
     }
+
 
 public:
     const std::vector<const char*> layers_;
@@ -320,10 +394,7 @@ int main(int argc, char* argv[] ) {
     if ( br::CollectiveContext::mpi_rank == 0) {
         BloomInput* in = new BloomInput();
 
-        std::vector<int> xinput;
-        br::read_data("model/xinput.bin", xinput);
-
-        MPI_Send(xinput.data(), 4 * 512, MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+        in->sub_batch();
 
         delete in;
     } else if ( br::CollectiveContext::mpi_rank == 1) {
@@ -333,11 +404,15 @@ int main(int argc, char* argv[] ) {
         std::vector<const char*> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
         BloomAttentions* attn = new BloomAttentions(layers);
 
+        /*
         auto start = std::chrono::high_resolution_clock::now();
         attn->do_train(4, 512);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "Time: " << duration.count() << std::endl;
+        */
+
+        attn->forward_backward();
 
 
         sleep(5);
@@ -352,19 +427,19 @@ int main(int argc, char* argv[] ) {
         std::vector<const char*> layers{"h1", "h3", "h5", "h7", "h9", "h11", "h13", "h15", "h17", "h19", "h21", "h23", "h25", "h27", "h29"};
         BloomAttentions* attn = new BloomAttentions(layers);
 
-        attn->do_train(4, 512);
+        attn->forward_backward();
+
 
         sleep(5);
         delete attn;
 
         br::ComputingContext::shutdown();
         br::MemoryContext::shutdown();
-    } else if ( br::CollectiveContext::mpi_rank == 3) {
-
-
     } else {
         br_panic("Can't be here!");
     }
+
+    std::cout << "Bye " << br::CollectiveContext::mpi_rank << std::endl;
 
     br::CollectiveContext::shutdown();
 }

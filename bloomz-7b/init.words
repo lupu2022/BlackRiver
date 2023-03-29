@@ -27,8 +27,11 @@
 %end
 
 %def create_weight
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "word_embeddings_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "word_embeddings_layernorm.bias"    !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "input_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "input_layernorm.bias"    !
 
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias"    !
@@ -92,7 +95,10 @@
 %end
 
 %def create_var
-    1 "cpu"  op.create  "_xmask_"   !   
+    dup
+    1 "cpu"  op.create  "_ids_"     !
+    1 "cpu"  op.create  "_mask_"    !
+    1 "cpu"  op.create  "_xmask_"  !   
     1 "cpu"  op.create  "_xinput_"  !   
     1 "cuda" op.create  "_var_"     !
 %end
@@ -123,6 +129,16 @@
 
     "header" !
      
+    {
+        "word_embeddings_layernorm.weight" @
+        "MSG_FILES_PATH" @  "word_embeddings_layernorm.weight.bin"  | 
+        io.load
+        
+        "word_embeddings_layernorm.bias" @
+        "MSG_FILES_PATH" @  "word_embeddings_layernorm.bias.bin"  | 
+        io.load
+    }
+
     {
         "input_layernorm.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.bin" | 
@@ -228,9 +244,16 @@
 
 %def sync
     ">>>Begin sync with GPU..." echo
-    
     dup
-    
+ 
+    0 #        "word_embeddings_layernorm.weight" @  
+    swap #     "word_embeddings_layernorm.weight" @  op.copy
+    dup
+  
+    0 #        "word_embeddings_layernorm.bias" @
+    swap #     "word_embeddings_layernorm.bias" @    op.copy 
+    dup
+
     0 #        "input_layernorm.weight" @  
     swap #     "input_layernorm.weight" @  op.copy
     dup

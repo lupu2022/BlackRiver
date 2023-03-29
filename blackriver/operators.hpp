@@ -27,6 +27,9 @@ struct TransformerComputing {
     virtual ComputingReturn io_dump(tensor_t self) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn io_mpi_bcast(tensor_t self, int root) {
+        return OP_TODO_ERROR;
+    }
     virtual ComputingReturn io_mpi_recv(tensor_t self, int source) {
         return OP_TODO_ERROR;
     }

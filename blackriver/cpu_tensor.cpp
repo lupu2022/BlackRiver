@@ -108,6 +108,15 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_recv(tensor_t self, int source) {
     return OP_TODO_ERROR;
 }
 
+template <DataType _DTYPE_>
+ComputingReturn CPUTensor<_DTYPE_>::io_mpi_bcast(tensor_t self, int root) {
+    if ( _DTYPE_ == DataType::Float ) {
+        MPI_Bcast(data(), self->items(), MPI_FLOAT, root, MPI_COMM_WORLD);
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 
 tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);

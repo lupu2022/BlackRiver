@@ -57,14 +57,14 @@ void CollectiveContext::boot(int argc, char* argv[], int gpus) {
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_world);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-    br_assert( mpi_world == gpus + 2 , "current we only support n + 2 mode!");
+    br_assert( mpi_world == gpus + 1 , "current we only support n + 1 mode!");
 
     if ( mpi_rank == 0 ) {
         ncclGetUniqueId(&nccl_id);
     }
     MPI_Bcast(&nccl_id, sizeof(nccl_id), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-    if ( mpi_rank >= 1 && mpi_rank < mpi_world - 1 ) {
+    if ( mpi_rank >= 1 ) {
         nccl_world = gpus;
         nccl_rank = mpi_rank - 1;
 

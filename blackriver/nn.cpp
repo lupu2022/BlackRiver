@@ -206,6 +206,15 @@ namespace io {
         NWORD_CREATOR_DEFINE_LR(MPIRecv)
     };
 
+    struct MPIBcast : public NativeWord {
+        virtual void run(Stack& stack) {
+            int root = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_mpi_bcast(x, root);
+        }
+        NWORD_CREATOR_DEFINE_LR(MPIBcast)
+    };
+
     struct NcclRecv : public NativeWord {
         virtual void run(Stack& stack) {
             int source = stack.pop_number();
@@ -230,6 +239,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.dump", io::Dump::creator );
     env.insert_native_word("io.load", io::Load::creator );
     env.insert_native_word("io.save", io::Save::creator );
+    env.insert_native_word("io.mpi.bcast", io::MPIBcast::creator );
     env.insert_native_word("io.mpi.recv", io::MPIRecv::creator );
     env.insert_native_word("io.nccl.send", io::NcclSend::creator );
     env.insert_native_word("io.nccl.recv", io::NcclRecv::creator );

@@ -3,7 +3,7 @@
 TARGET = train_bloom
 all: $(TARGET) 
 
-FLAGS = -Wall -O3 -Wno-maybe-uninitialized 
+FLAGS = -Wall -O3 -Wno-maybe-uninitialized -fopenmp 
 INC = -I. -I/engine/includes \
 	  -I/home/teaonly/opt/nccl/include \
 	  -I/usr/local/cuda/include \
@@ -32,5 +32,5 @@ clean:
 	rm -f $(TARGET)
 
 run: $(TARGET)
-	mpirun -n 4 -stdin 1 train_bloom
+	mpirun -n 3 -stdin 1 train_bloom
 
