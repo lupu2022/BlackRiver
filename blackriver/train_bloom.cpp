@@ -262,7 +262,7 @@ int main(int argc, char* argv[] ) {
         br::read_data("model/xinput.bin", xinput);
 
         for (int i = 0; i < 2; i++) {
-            MPI_Send(xinput.data(), xinput.size(), MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
+            MPI_Send(xinput.data(), 4 * 512, MPI_FLOAT, 1, 0, MPI_COMM_WORLD);
         }
 
     } else if ( br::CollectiveContext::mpi_rank == 1) {
@@ -272,7 +272,7 @@ int main(int argc, char* argv[] ) {
         std::vector<std::string> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
         br::Enviroment* env = create_env(layers, true);
 
-        create_dynamic(env, 40, 512);
+        create_dynamic(env, 4, 512);
 
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
@@ -300,7 +300,7 @@ int main(int argc, char* argv[] ) {
         std::string train_code = fileToString("model/train.words");
         env->execute(train_code);
 
-        create_dynamic(env, 40, 512);
+        create_dynamic(env, 4, 512);
 
         sleep(15);
         for ( int i = 0; i < 2; i++) {
