@@ -80,13 +80,14 @@ inline void _M_Panic(const char* file, int line, const char* msg) {
     abort();
 }
 
-inline void read_data(const char* fileName, std::vector<float>& dout) {
+template<typename T>
+inline void read_data(const char* fileName, std::vector<T>& dout) {
     std::ifstream inf(fileName, std::ios::binary);
     inf.seekg(0, inf.end);
     size_t length = inf.tellg();
     inf.seekg(0, inf.beg);
 
-    dout.resize( length / sizeof(float) );
+    dout.resize( length / sizeof(T) );
     inf.read((char *)dout.data(), length);
     inf.close();
 }
