@@ -1,6 +1,6 @@
 %def forward
     ;; layernorm for input
-    "xinput" @ "xb" @ "xc" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xe" @ op.layernorm 
+    "xinput" @ "xb" @ "xc" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xe" @  "LN_EPS" @  op.layernorm 
     
     ;; get kqv
     {
@@ -15,7 +15,7 @@
         "yb" @ "za" @ op.transpos_0213          ;; key -> za
         "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
     }
-   
+    
     ;; get query@key
     "zd" @  "za" @  "xll" @ op.querykey 
 
@@ -37,7 +37,7 @@
     "xb" @ "xinput" @ "xa" @ op.add
 
     ;; post layernorm
-    "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @ op.layernorm
+    "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
     
     ;; MLP
     ;; xa atteion output
@@ -77,12 +77,7 @@
         
         "xa" @ "xb" @ "xc" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ "LN_EPS" @ op.layernorm 
       
-        op.sync
-        
-        "xinput" @ io.dump
-       
-        ^
-        
+        forward
         ;op.sync
         "xa" @  1 io.nccl.send
     }
@@ -219,7 +214,7 @@
         
         "xinput" @ 1 io.nccl.recv 
         
-        "xinput" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xa" @ op.layernorm
+        "xinput" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xa" @ "LN_EPS" @ op.layernorm
         
         ;; TODO
     }
@@ -377,5 +372,7 @@
         "xa" @ 0 io.nccl.send
     }
     op.sync
+
+    "xa" @ io.dump
 
 %end
