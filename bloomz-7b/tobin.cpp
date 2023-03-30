@@ -33,5 +33,5 @@ int main( int argc, const char* argv[]) {
     load_data(argv[1], data);
 
     std::ofstream os(argv[2], std::ios::binary);
-    os.write((const char *)data.data(), sizeof(float) * data.size());
+    os.write((const char *)data.data(), sizeof(int) * data.size());
 }

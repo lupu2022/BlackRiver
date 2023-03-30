@@ -64,7 +64,7 @@ struct BloomInput {
 
             for (size_t m = 0; m < tokens; m++) {
                 for( size_t n = 0; n <= m; n++) {
-                    if ( ms[n] != 1) {
+                    if ( ms[n] != 0) {
                         m2d[m * tokens + n] = 1.0;
                     } else {
                         break;
@@ -119,12 +119,11 @@ struct BloomAttentions {
 
         size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
 
-        size_t max_tokens = 16l * 2048;
         size_t max_input  = 16l * 2048 * HIDDEN_SIZE;
         size_t max_xmask  = 16l * 2048 * 2048;
 
         std::stringstream ss;
-        ss << total_var << " " <<  max_input << " " << max_xmask << " " << max_tokens << " create_var";
+        ss << total_var << " " <<  max_input << " " << max_xmask << " create_var";
         env_->execute( ss.str() );
 
         // others is used in CPU
@@ -156,43 +155,10 @@ struct BloomAttentions {
         delete env_;
     }
 
-
     void create_dynamic(size_t batch, size_t tokens) {
         env_->change(0);
 
         size_t pos = 0;
-        // ids in GPU, ids_ in CPU
-        {
-            std::stringstream ss;
-            ss << "'_var_' @ " << pos << " [" << batch << " " << tokens << "] op.view ";
-            ss << " 'ids' !";
-            ss << std::endl;
-
-            ss << "'_ids_' @  0 [" << batch << " " << tokens << "] op.view ";
-            ss << " 'ids_' !";
-            ss << std::endl;
-
-            env_->execute( ss.str() );
-
-            pos = pos + batch * tokens;
-        }
-
-        // mask in GPU, mask_ in CPU
-        {
-            std::stringstream ss;
-            ss << "'_var_' @ " << pos << " [" << batch << " " << tokens << "] op.view ";
-            ss << " 'mask' !";
-            ss << std::endl;
-
-            ss << "'_mask_' @  0 [" << batch << " " << tokens << "] op.view ";
-            ss << " 'mask_' !";
-            ss << std::endl;
-
-            env_->execute( ss.str() );
-
-            pos = pos + batch * tokens;
-        }
-
         // xinput in GPU, xinput_ in CPU
         {
             std::stringstream ss;
@@ -372,7 +338,13 @@ struct BloomAttentions {
         MPI_Bcast(&batch, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&tokens, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-        std::cout << "################### " << batch << " " << tokens << std::endl;
+        std::vector<int> ids;
+        std::vector<int> mask;
+        ids.resize(batch * tokens);
+        mask.resize(batch * tokens);
+
+        MPI_Bcast(ids.data(), ids.size(), MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(mask.data(), mask.size(), MPI_INT, 0, MPI_COMM_WORLD);
 
         create_dynamic(batch, tokens);
         if ( br::CollectiveContext::nccl_rank == 0) {

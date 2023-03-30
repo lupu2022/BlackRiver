@@ -95,9 +95,6 @@
 %end
 
 %def create_var
-    dup
-    1 "cpu"  op.create  "_ids_"     !
-    1 "cpu"  op.create  "_mask_"    !
     1 "cpu"  op.create  "_xmask_"  !   
     1 "cpu"  op.create  "_xinput_"  !   
     1 "cuda" op.create  "_var_"     !

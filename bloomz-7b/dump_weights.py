@@ -20,7 +20,6 @@ def build_input_for_test():
     with open( "xinput.msg", "wb") as outfile:
         outfile.write(d)
 
-
 def dump_qkv_file(sdict, k, target):
     print(target + " is writing...");
 
@@ -66,7 +65,6 @@ def dump_transformer():
     path_dst = "weights/"
 
     ### dump embedded and output
-    '''
     sdict = torch.load(path_src + "word_embeddings_layernorm.pth");
     vlist = sdict["weight"].float().numpy().flatten().tolist()
     d = msgpack.packb(vlist, use_bin_type=True);
@@ -77,7 +75,6 @@ def dump_transformer():
     d = msgpack.packb(vlist, use_bin_type=True);
     with open( path_dst + "word_embeddings_layernorm.bias.msg", "wb") as outfile:
         outfile.write(d)
-    '''
 
     sdict = torch.load(path_src + "word_embeddings.pth");
     vlist = sdict["weight"].float().numpy().flatten().tolist()
@@ -85,10 +82,8 @@ def dump_transformer():
     with open( path_dst + "word_embeddings.weight.msg", "wb") as outfile:
         outfile.write(d)
 
-    return;
 
     ### dump final output
-    '''
     sdict = torch.load(path_src + "ln_f.pth");
     vlist = sdict["weight"].float().numpy().flatten().tolist()
     d = msgpack.packb(vlist, use_bin_type=True);
@@ -106,10 +101,8 @@ def dump_transformer():
     d = msgpack.packb(vlist, use_bin_type=True);
     with open( path_dst + "lm_head.weight.msg", "wb") as outfile:
         outfile.write(d)
-    '''
 
-    return;
-
+    ### dump attention layers
     for i in range(30):
         hname = "h_" + str(i) + ".pth";
         print("load.. " + str(i)  + " attention");
