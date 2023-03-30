@@ -103,6 +103,109 @@
     1 "cuda" op.create  "_var_"     !
 %end
 
+%def create_dynamic
+    0 #
+
+    $tokens !
+    $batch  !
+
+    ;; xinput in GPU, xinput_ in CPU
+    {
+        "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
+        "_xinput_" @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput_" !
+
+        $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
+    }
+   
+    ;; alibi in GPU, alibi_ in CPU
+    {
+        dup
+        "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi" ! 
+        "_alibi_" @ 0   1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi_" ! 
+    
+        "HEADS_NUM" @ $tokens @ * +  
+    }
+
+    ;; xmask in GPU, xmask_ in CPU
+    {
+        dup
+        "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask"  ! 
+        "_xmask_" @ 0  $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask_" ! 
+    
+        $batch @ $tokens @ $tokens @ * * +
+    }
+
+    ;; xa, xb, xc, xd, xe
+    {
+        dup  
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ya" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "za" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+        
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xb" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yb" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zb" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xc" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yc" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zc" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+        
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xd" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+        
+        dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xe" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ye" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "ze" !
+    }
+    
+    ;; x3a x3b
+    {
+        dup
+
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3a" !
+        dup $batch @ $tokens @ "HIDDEN_SIZE_x3" @  * * +
+
+
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3b" !
+    }
+   
+    ;; x4a x4b
+    {
+        dup
+
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
+        dup $batch @ $tokens @ "HIDDEN_SIZE_x4" @  * * +
+ 
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
+    }
+
+    ;; larget memroy
+    {
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
+        
+        dup
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
+        "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
+    }
+    
+    $tokens !!
+    $batch !!
+
+%end
+
+
+
 %def zero_grad
     "input_layernorm.weight_g" @  op.zero
     "input_layernorm.bias_g" @ op.zero
