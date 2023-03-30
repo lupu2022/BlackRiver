@@ -65,7 +65,7 @@ struct CUDATensor : public TransformerComputing {
     virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c);
 
     virtual ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y);
-    virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y);
+    virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps);
 
     virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y);
     virtual ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk);

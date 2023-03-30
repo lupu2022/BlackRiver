@@ -88,6 +88,7 @@ namespace nn {
 
     struct Layernorm : public NativeWord {
         virtual void run(Stack& stack) {
+            float eps = stack.pop_number();
             tensor_t y = stack.pop_tensor();
             tensor_t bias = stack.pop_tensor();
             tensor_t scale = stack.pop_tensor();
@@ -96,7 +97,7 @@ namespace nn {
 
             tensor_t x = stack.pop_tensor();
 
-            x->op_layernorm(x, mean, var, scale, bias, y);
+            x->op_layernorm(x, mean, var, scale, bias, y, eps);
         }
         NWORD_CREATOR_DEFINE_LR(Layernorm)
     };

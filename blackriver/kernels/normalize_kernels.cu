@@ -7,14 +7,6 @@
 
 namespace kernels {
 
-const float LN_EPSILON = 1e-8f;
-#define TILE_DIM 32
-
-template <typename T>
-__forceinline__ __device__ T add_eps(T x) {
-  return fabsf(x) > LN_EPSILON ? x : (x < 0 ? -LN_EPSILON : LN_EPSILON);
-}
-
 /**
 @brief: ker_layer_norm
 Standard layer normalization.
@@ -35,9 +27,8 @@ inp: [batch_size * seq_len, hidden_size], ln input.
 scale: [hidden_size], ln scale
 bias: [hidden_size], ln bias
 */
-template <typename T>
-__global__ void ker_layer_norm(T *ln_res, T *vars, T *means, const T *inp,
-                               const T *scale, const T *bias, int hidden_size) {
+__global__ void ker_layer_norm(float *ln_res, float *vars, float *means, const float *inp,
+                               const float *scale, const float *bias, int hidden_size, float eps) {
   // step 0. compute local sum
   float l_sum = 0;
   float l_square_sum = 0;
@@ -60,8 +51,10 @@ __global__ void ker_layer_norm(T *ln_res, T *vars, T *means, const T *inp,
     if (means != nullptr) {
       means[blockIdx.x] = s_mean;
     }
-    s_var = reduce_val[1] / mean_dim - s_mean * s_mean + LN_EPSILON;
-    vars[blockIdx.x] = s_var;
+    s_var = reduce_val[1] / mean_dim - s_mean * s_mean + eps;
+    if (vars != nullptr) {
+        vars[blockIdx.x] = s_var;
+    }
     s_var = rsqrtf(s_var);
   }
   __syncthreads();
@@ -83,18 +76,19 @@ __global__ void ker_layer_norm(T *ln_res, T *vars, T *means, const T *inp,
 
 void launch_layer_norm_float(float *ln_res, float *vars, float *means,
                           const float *inp, const float *scale,
-                          const float *bias, int batch_size, int hidden_dim,
+                          const float *bias, int batch_size, int hidden_dim, float eps, 
                           cudaStream_t stream) {
   if (hidden_dim % 4 != 0) {
       throw ::std::runtime_error("violate hidden_dim % 4(float) 8(__half) = 0");
   }
-  hidden_dim >>= 2;
+  hidden_dim = hidden_dim >> 2;
+
   int nthread = min(((hidden_dim + 31) / 32) * 32, MAX_THREADS);
   dim3 grid_dim(batch_size);
   dim3 block_dim(nthread);
 
-  ker_layer_norm<float><<<grid_dim, block_dim, 0, stream>>>(
-      ln_res, vars, means, inp, scale, bias, hidden_dim);
+  ker_layer_norm<<<grid_dim, block_dim, 0, stream>>>(
+      ln_res, vars, means, inp, scale, bias, hidden_dim, eps);
 }
 
 

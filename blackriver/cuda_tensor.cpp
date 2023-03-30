@@ -264,7 +264,7 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
 
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y) {
+ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
     if ( DT == DataType::Float ) {
         auto x = this;
         size_t batch = self->shape().vec()[0] * self->shape().vec()[1];

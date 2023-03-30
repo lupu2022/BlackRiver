@@ -69,21 +69,20 @@
         "xmask" @ "xmask_" @ op.copy
     }
 
-    "alibi" @ ? io.dump
-    "xmask" @ ? io.dump
-    ^
-
     ;; layer 0
     {
         1 sync 0 #
         "xinput_" @ 0 io.mpi.recv
         "xa" @ "xinput_" @ op.copy
         
-        "xa" @ io.dump
-
-        "xa" @ "xb" @ "xc" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ op.layernorm 
+        "xa" @ "xb" @ "xc" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ "LN_EPS" @ op.layernorm 
+      
+        op.sync
         
-        forward
+        "xinput" @ io.dump
+       
+        ^
+        
         ;op.sync
         "xa" @  1 io.nccl.send
     }
@@ -243,10 +242,6 @@
         "xmask" @ "xmask_" @ op.copy
     }
     
-    "alibi" @ ? io.dump
-    "xmask" @ ? io.dump
-    ^
-
     { 
         1 sync 0 # 
         "xinput" @ 0 io.nccl.recv

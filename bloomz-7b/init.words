@@ -9,6 +9,8 @@
 32                      "HEADS_NUM"             !
 128                     "HEAD_HIDDEN"           !
 
+1e-05                   "LN_EPS"                !
+
 "HIDDEN_SIZE" @ 3 *     "HIDDEN_SIZE_x3"        !
 "HIDDEN_SIZE" @ 4 *     "HIDDEN_SIZE_x4"        !
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 

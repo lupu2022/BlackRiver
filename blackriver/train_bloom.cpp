@@ -154,12 +154,12 @@ struct BloomAttentions {
 
             std::stringstream ss;
             ss << "'" << layers_[i-1] << "' load_weight";
-            //env_->execute( ss.str() );
+            env_->execute( ss.str() );
             env_->execute( "zero_grad" );
 
             if ( (br::CollectiveContext::nccl_rank == 0)  && (i == layers_.size()) ) {
                 env_->execute("create_output");
-                //env_->execute("load_output");
+                env_->execute("load_output");
             }
         }
         delete init_wd;
