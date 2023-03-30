@@ -55,9 +55,6 @@ struct TransformerComputing {
     virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) {
         return OP_TODO_ERROR;
     }
-    virtual ComputingReturn op_build_alibi(tensor_t self) {
-        return OP_TODO_ERROR;
-    }
     virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) {
         return OP_TODO_ERROR;
     }

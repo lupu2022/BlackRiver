@@ -61,7 +61,6 @@ struct CUDATensor : public TransformerComputing {
     virtual ComputingReturn op_fill(tensor_t self, float value);
     virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape);
     virtual ComputingReturn op_copy(tensor_t self, tensor_t src);
-    virtual ComputingReturn op_build_alibi(tensor_t self);
     virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c);
 
     virtual ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y);

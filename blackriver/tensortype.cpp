@@ -36,12 +36,6 @@ std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_
     return result;
 }
 
-ComputingReturn TensorType::op_build_alibi(tensor_t self) {
-    br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_build_alibi(self);
-    op_check(ret, "build_alibi");
-}
-
 ComputingReturn TensorType::op_add(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_add(self, b, c);

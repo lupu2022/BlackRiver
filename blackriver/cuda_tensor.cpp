@@ -202,39 +202,6 @@ std::variant<ComputingReturn, tensor_t> CUDATensor<DT>::op_view(tensor_t self, s
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_build_alibi(tensor_t self) {
-    if ( DT == DataType::Float ) {
-        size_t batch = self->shape().vec()[0];
-        size_t heads = self->shape().vec()[1];
-        size_t tokens = self->shape().vec()[3];
-
-        if ( heads & ( heads - 1) ) {
-            br_panic("Only support heads number is power of 2");
-        }
-
-        double base = 3 - log2(heads*1.0);
-        base = -1 * pow(2.0, base);
-        base = pow(2.0, base);
-
-        std::vector<float> ldata;
-        for (int i = 0; i < (int)batch; i++) {
-            for (int j = 0; j < (int)heads; j++) {
-                double slope = pow(base, (j + 1) * 1.0);
-                for (int k = 0; k < (int)tokens; k++) {
-                    ldata.push_back( k * 1.0 * slope );
-                }
-            }
-        }
-
-        CUBLAS_CHECK( cublasSetVector(self->items(), sizeof(float), ldata.data(), 1, data() , 1) );
-
-        return OP_OK;
-    }
-    return OP_TODO_ERROR;
-
-}
-
-template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
     if ( DT == DataType::Float ) {
         auto adesc = create_cudnn_td_with( self->shape().vec() );

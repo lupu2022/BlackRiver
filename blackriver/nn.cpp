@@ -123,14 +123,6 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(QueryKey)
     };
 
-    struct BuildAlibi : public NativeWord {
-        virtual void run(Stack& stack) {
-            tensor_t alibi = stack.pop_tensor();
-            alibi->op_build_alibi(alibi);
-        }
-        NWORD_CREATOR_DEFINE_LR(BuildAlibi)
-    };
-
     struct Add : public NativeWord {
         virtual void run(Stack& stack) {
             tensor_t c = stack.pop_tensor();
@@ -254,7 +246,6 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.linear", nn::Linear::creator );
     env.insert_native_word("op.layernorm", nn::Layernorm::creator );
     env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
-    env.insert_native_word("op.build_alibi", nn::BuildAlibi::creator);
     env.insert_native_word("op.add", nn::Add::creator);
     env.insert_native_word("op.querykey", nn::QueryKey::creator);
     env.insert_native_word("op.softmax", nn::Softmax::creator);
