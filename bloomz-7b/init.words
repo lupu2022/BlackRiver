@@ -95,6 +95,7 @@
 %end
 
 %def create_var
+    1 "cpu"  op.create  "_alibi_"  !
     1 "cpu"  op.create  "_xmask_"  !   
     1 "cpu"  op.create  "_xinput_"  !   
     1 "cuda" op.create  "_var_"     !

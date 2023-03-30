@@ -38,7 +38,7 @@ struct BloomInput {
     ~BloomInput() {
     }
 
-    std::tuple<int, int> fetch_data(std::vector<int>& ids, std::vector<int>& mask, std::vector<float>& xinput, std::vector<float>& xmask) {
+    std::tuple<int, int> fetch_data(std::vector<int>& ids, std::vector<int>& mask, std::vector<float>& xinput, std::vector<float>& alibi, std::vector<float>& xmask) {
         const size_t batch = 4;
         const size_t tokens = 512;
 
@@ -55,9 +55,25 @@ struct BloomInput {
             memcpy(dst, embedding, HIDDEN_SIZE * sizeof(float) );
         }
 
+        // building alibi
+        alibi.clear();
+        {
+            double base = 3 - log2(HEADS_NUM*1.0);
+            base = -1 * pow(2.0, base);
+            base = pow(2.0, base);
+
+            for (int j = 0; j < (int)HEADS_NUM; j++) {
+                double slope = pow(base, (j + 1) * 1.0);
+                for (int k = 0; k < (int)tokens; k++) {
+                    alibi.push_back( k * 1.0 * slope );
+                }
+            }
+        }
+
         // building xmask
         xmask.resize(1l * batch * tokens * tokens );
-        std::fill(xmask.begin(), xmask.end(), 0.0);
+        std::fill(xmask.begin(), xmask.end(), -1.0 * std::numeric_limits<float>::max());
+
         for (size_t i = 0; i < batch; i++) {
             const int* ms = &mask[i * tokens];
             float* m2d = &xmask[ i * tokens * tokens ];
@@ -65,7 +81,7 @@ struct BloomInput {
             for (size_t m = 0; m < tokens; m++) {
                 for( size_t n = 0; n <= m; n++) {
                     if ( ms[n] != 0) {
-                        m2d[m * tokens + n] = 1.0;
+                        m2d[m * tokens + n] = 0.0;
                     } else {
                         break;
                     }
@@ -80,9 +96,10 @@ struct BloomInput {
         std::vector<int> ids;
         std::vector<int> mask;
         std::vector<float> xinput;
+        std::vector<float> alibi;
         std::vector<float> xmask;
 
-        auto ret = fetch_data(ids, mask, xinput, xmask);
+        auto ret = fetch_data(ids, mask, xinput, alibi, xmask);
         int batch = std::get<0>(ret);
         int tokens = std::get<1>(ret);
 
@@ -92,6 +109,7 @@ struct BloomInput {
 
         MPI_Bcast(ids.data(), ids.size(), MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(mask.data(), mask.size(), MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(alibi.data(), alibi.size(), MPI_FLOAT, 0, MPI_COMM_WORLD);
         MPI_Bcast(xmask.data(), xmask.size(), MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         // sending to first layer
@@ -118,12 +136,12 @@ struct BloomAttentions {
         env_->execute("create_grad");
 
         size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
-
+        size_t max_alibi = HEADS_NUM * 2048;
         size_t max_input  = 16l * 2048 * HIDDEN_SIZE;
         size_t max_xmask  = 16l * 2048 * 2048;
 
         std::stringstream ss;
-        ss << total_var << " " <<  max_input << " " << max_xmask << " create_var";
+        ss << total_var << " " <<  max_input << " " << max_xmask << " " << max_alibi << " create_var";
         env_->execute( ss.str() );
 
         // others is used in CPU
@@ -136,12 +154,12 @@ struct BloomAttentions {
 
             std::stringstream ss;
             ss << "'" << layers_[i-1] << "' load_weight";
-            env_->execute( ss.str() );
+            //env_->execute( ss.str() );
             env_->execute( "zero_grad" );
 
             if ( (br::CollectiveContext::nccl_rank == 0)  && (i == layers_.size()) ) {
                 env_->execute("create_output");
-                env_->execute("load_output");
+                //env_->execute("load_output");
             }
         }
         delete init_wd;
@@ -175,14 +193,30 @@ struct BloomAttentions {
             pos = pos + batch * tokens * HIDDEN_SIZE;
         }
 
+        // alibi in GPU, alibi_ in CPU
+        {
+            std::stringstream ss;
+            ss << "'_var_' @ " << pos << " [1 " << HEADS_NUM << " 1 " << tokens << "] op.view ";
+            ss << " 'alibi' !";
+            ss << std::endl;
+
+            ss << "'_alibi_' @  0  [1 " << HEADS_NUM << " 1 " << tokens << "] op.view ";
+            ss << " 'alibi_' !";
+            ss << std::endl;
+
+            env_->execute( ss.str() );
+
+            pos = pos + HEADS_NUM * tokens;
+        }
+
         // xmask in GPU, xmask_ in CPU
         {
             std::stringstream ss;
-            ss << "'_var_' @ " << pos << " [" << batch << " " << tokens << " " << tokens << "] op.view ";
+            ss << "'_var_' @ " << pos << " [" << batch << " 1 " << tokens << " " << tokens << "] op.view ";
             ss << " 'xmask' !";
             ss << std::endl;
 
-            ss << "'_xmask_' @  0  [" << batch << " " << tokens << " " << tokens << "] op.view ";
+            ss << "'_xmask_' @  0  [" << batch << " 1 " << tokens << " " << tokens << "] op.view ";
             ss << " 'xmask_' !";
             ss << std::endl;
 
@@ -191,6 +225,7 @@ struct BloomAttentions {
             pos = pos + batch * tokens * tokens;
         }
 
+        /*
         // alibi in GPU
         {
             std::stringstream ss;
@@ -202,6 +237,7 @@ struct BloomAttentions {
 
             pos = pos + batch * HEADS_NUM * tokens;
         }
+        */
 
         // xa, xb, xc, xd, xe
         // ya, yb, yc, yd, ye
