@@ -136,12 +136,8 @@ struct BloomAttentions {
         env_->execute("create_grad");
 
         size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
-        size_t max_alibi = HEADS_NUM * 2048;
-        size_t max_input  = 16l * 2048 * HIDDEN_SIZE;
-        size_t max_xmask  = 16l * 2048 * 2048;
-
         std::stringstream ss;
-        ss << total_var << " " <<  max_input << " " << max_xmask << " " << max_alibi << " create_var";
+        ss << total_var << " create_var";
         env_->execute( ss.str() );
 
         // others is used in CPU

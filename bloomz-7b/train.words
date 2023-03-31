@@ -216,7 +216,8 @@
         
         "xinput" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xa" @ "LN_EPS" @ op.layernorm
         
-        ;; TODO
+        "lm_head.weight" @ ? drop
+        " TODO: backward computing... " echo 
     }
     op.sync
     

@@ -97,10 +97,13 @@
 %end
 
 %def create_var
-    1 "cpu"  op.create  "_alibi_"  !
-    1 "cpu"  op.create  "_xmask_"  !   
-    1 "cpu"  op.create  "_xinput_"  !   
     1 "cuda" op.create  "_var_"     !
+   
+    16 2048 *             1 "cpu"  op.create  "_ids_"     !
+    16 2048 *             1 "cpu"  op.create  "_mask_"    !
+    "HEADS_NUM" @ 2048 *  1 "cpu"  op.create  "_alibi_"   !
+    16 2048 2048 * *      1 "cpu"  op.create  "_xmask_"   !   
+    16 2048 4096 *        1 "cpu"  op.create  "_xinput_"  !   
 %end
 
 %def create_dynamic

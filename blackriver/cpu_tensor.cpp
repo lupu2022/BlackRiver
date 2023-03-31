@@ -117,7 +117,6 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_bcast(tensor_t self, int root) {
     return OP_TODO_ERROR;
 }
 
-
 tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CPUTensor<DataType::Float>* tensor = new CPUTensor<DataType::Float>(shape);
