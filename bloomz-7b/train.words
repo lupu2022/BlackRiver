@@ -74,9 +74,9 @@
         1 sync 0 #
         "xinput_" @ 0 io.mpi.recv
         "xa" @ "xinput_" @ op.copy
-        
+     
         "xa" @ "xb" @ "xc" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ "LN_EPS" @ op.layernorm 
-      
+     
         forward
         ;op.sync
         "xa" @  1 io.nccl.send
@@ -265,6 +265,7 @@
         "xa" @ 0 io.nccl.send
     }
 
+
     {
         4 sync 0 # 
         "xinput" @ 0 io.nccl.recv
@@ -373,6 +374,6 @@
     }
     op.sync
 
-    "xa" @ io.dump
+    ;;"xa" @ io.dump
 
 %end

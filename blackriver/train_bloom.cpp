@@ -39,7 +39,7 @@ struct BloomInput {
     }
 
     std::tuple<int, int> fetch_data(std::vector<int>& ids, std::vector<int>& mask, std::vector<float>& xinput, std::vector<float>& alibi, std::vector<float>& xmask) {
-        const size_t batch = 4;
+        const size_t batch = 2;
         const size_t tokens = 512;
 
         // fill ids&masks
@@ -254,8 +254,6 @@ int main(int argc, char* argv[] ) {
     } else {
         br_panic("Can't be here!");
     }
-
-    std::cout << "Bye " << br::CollectiveContext::mpi_rank << std::endl;
 
     br::CollectiveContext::shutdown();
 }
