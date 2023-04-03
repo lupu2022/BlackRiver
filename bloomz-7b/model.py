@@ -26,33 +26,6 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from torch.nn import functional as F
 
-def test():
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
-    config = LLMConfig();
-
-    x = torch.load("xinput.pth")["x"];
-    x = x[:1, :512, :]
-
-    heads = config.n_head;
-    (batch, tokens, _) = x.shape;
-
-    mask = torch.ones(batch, tokens);
-    alibi = build_alibi_tensor(mask, heads, mask.dtype);
-    mask = _expand_mask(mask, tokens);
-
-    checkpoint = "bigscience/bloomz-7b1-mt"
-    model = AutoModelForCausalLM.from_pretrained(checkpoint)
-
-    for block in model.transformer.h:
-        print(">>>>>>>>>>>>>")
-        x = block(x, alibi, mask);
-        x = x[0]
-
-    x = model.transformer.ln_f(x)
-
-    return model, x;
-
 def save_bloomz_7b1_mt():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 

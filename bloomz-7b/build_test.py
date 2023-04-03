@@ -20,7 +20,7 @@ The above copyright notice and this permission notice shall be included in all c
 
 tks = tokenizer( text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
 
-
+'''
 torch.save(tks, "xinput.pth");
 vlist = tks["input_ids"].numpy().flatten().tolist()
 d = msgpack.packb(vlist, use_bin_type=True);
@@ -31,6 +31,7 @@ vlist = tks["attention_mask"].numpy().flatten().tolist()
 d = msgpack.packb(vlist, use_bin_type=True);
 with open( "xinput.mask.msg", "wb") as outfile:
     outfile.write(d)
+'''
 
 x = model(**tks, output_attentions = False, output_hidden_states = True );
 
