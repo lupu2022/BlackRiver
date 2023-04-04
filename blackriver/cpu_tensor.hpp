@@ -25,16 +25,16 @@ struct CPUTensor : public TransformerComputing {
 
 public:
     // Interfaces from TransformerComputing
-    virtual ComputingReturn io_dump(tensor_t self);
-    virtual ComputingReturn io_load(tensor_t self, const char* fileName);
-    virtual ComputingReturn io_save(tensor_t self, const char* fileName);
-    virtual ComputingReturn io_mpi_bcast(tensor_t self, int root);
-    virtual ComputingReturn io_mpi_recv(tensor_t self, int source);
+    ComputingReturn io_dump(tensor_t self) override;
+    ComputingReturn io_load(tensor_t self, const char* fileName) override;
+    ComputingReturn io_save(tensor_t self, const char* fileName) override;
+    ComputingReturn io_mpi_bcast(tensor_t self, int root) override;
+    ComputingReturn io_mpi_recv(tensor_t self, int source) override;
 
-    virtual ComputingReturn op_zero(tensor_t self);
-    virtual ComputingReturn op_copy(tensor_t self, tensor_t dst);
-    virtual ComputingReturn op_fill(tensor_t self, float value);
-    virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_);
+    ComputingReturn op_zero(tensor_t self) override;
+    ComputingReturn op_copy(tensor_t self, tensor_t dst) override;
+    ComputingReturn op_fill(tensor_t self, float value) override;
+    std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_) override;
 private:
     void* mem_;
 

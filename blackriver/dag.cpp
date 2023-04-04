@@ -312,7 +312,7 @@ UserWord Enviroment::compile(const std::string& txt) {
 namespace builtin {
     struct BuiltinGet : public BuiltinOperator {
         Hash::Item value;
-        virtual void run(Enviroment* env) {
+        void run(Enviroment* env) override {
             auto& hash = env->hash();
             auto& stack = env->stack();
 
@@ -323,7 +323,7 @@ namespace builtin {
     };
 
     struct BuiltinSet : public BuiltinOperator {
-        virtual void run(Enviroment* env) {
+        void run(Enviroment* env) override {
             auto& hash = env->hash();
             auto& stack = env->stack();
 
@@ -336,7 +336,7 @@ namespace builtin {
     struct BuiltinDrop : public BuiltinOperator {
         BuiltinDrop() {
         }
-        virtual void run(Enviroment* env) {
+        void run(Enviroment* env) override {
             auto& hash = env->hash();
             auto& stack = env->stack();
 
@@ -348,7 +348,7 @@ namespace builtin {
     struct BuiltinChangeHash : public BuiltinOperator {
         BuiltinChangeHash() {
         }
-        virtual void run(Enviroment* env) {
+        void run(Enviroment* env) override {
             auto& stack = env->stack();
 
             size_t hash = stack.pop_number();
@@ -410,56 +410,56 @@ void Enviroment::linking(DaG& dag, UserWord& word) {
 
 namespace base {
     struct Exit : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             exit(0);
         }
         NWORD_CREATOR_DEFINE_LR(Exit)
     };
 
     struct Dump : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             std::cout << stack << std::endl;
         }
         NWORD_CREATOR_DEFINE_LR(Dump)
     };
 
     struct Drop : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             stack.drop();
         }
         NWORD_CREATOR_DEFINE_LR(Drop)
     };
 
     struct Dup : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             stack.dup();
         }
         NWORD_CREATOR_DEFINE_LR(Dup)
     };
 
     struct Dup2 : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             stack.dup2();
         }
         NWORD_CREATOR_DEFINE_LR(Dup2)
     };
 
     struct Swap : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             stack.swap();
         }
         NWORD_CREATOR_DEFINE_LR(Swap)
     };
 
     struct Rot : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             stack.rot();
         }
         NWORD_CREATOR_DEFINE_LR(Rot)
     };
 
     struct Add : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             double a = stack.pop_number();
             double b = stack.pop_number();
             stack.push_number( b + a );
@@ -468,7 +468,7 @@ namespace base {
     };
 
     struct Sub : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             double a = stack.pop_number();
             double b = stack.pop_number();
             stack.push_number( b - a );
@@ -477,7 +477,7 @@ namespace base {
     };
 
     struct Mul : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             double a = stack.pop_number();
             double b = stack.pop_number();
             stack.push_number( b * a );
@@ -486,7 +486,7 @@ namespace base {
     };
 
     struct Div : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             double a = stack.pop_number();
             double b = stack.pop_number();
             stack.push_number( b / a );
@@ -495,7 +495,7 @@ namespace base {
     };
 
     struct Combin : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             auto a = stack.pop_string();
             auto b = stack.pop_string();
             std::string c = b + a;
@@ -505,7 +505,7 @@ namespace base {
     };
 
     struct Echo : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             auto msg = stack.pop_string();
             std::cout << CollectiveContext::mpi_rank << ":" << CollectiveContext::now()  << "\t" <<  msg << std::endl;
         }

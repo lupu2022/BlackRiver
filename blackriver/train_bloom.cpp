@@ -180,9 +180,6 @@ struct BloomAttentions {
         ids.resize(batch * tokens);
         mask.resize(batch * tokens);
 
-        MPI_Bcast(ids.data(), ids.size(), MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(mask.data(), mask.size(), MPI_INT, 0, MPI_COMM_WORLD);
-
         std::stringstream ss;
         ss << batch << " " << tokens << " create_dynamic";
         env_->execute( ss.str() );

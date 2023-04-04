@@ -90,6 +90,12 @@ ComputingReturn TensorType::op_gelu(tensor_t self, tensor_t dst) {
     op_check(ret, "attn");
 }
 
+ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t output) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_last_logits(self, mask, lm_head, output);
+    op_check(ret, "attn");
+}
+
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");
     auto ret = impl()->io_load(self, fileName);

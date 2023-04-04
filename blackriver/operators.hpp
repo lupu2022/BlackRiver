@@ -82,6 +82,15 @@ struct TransformerComputing {
     virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_last_logits(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t output ) {
+        return OP_TODO_ERROR;
+    }
+    virtual std::variant<ComputingReturn, float> op_loss(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t output ) {
+        return OP_TODO_ERROR;
+    }
+    virtual std::variant<ComputingReturn, float> op_backward(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t grad ) {
+        return OP_TODO_ERROR;
+    }
 };
 
 

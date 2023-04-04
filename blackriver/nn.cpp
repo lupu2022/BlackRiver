@@ -14,14 +14,14 @@ namespace nn {
         return shape;
     }
     struct Sync : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             auto stream = br::ComputingContext::cuda_stream;
             CUDA_CHECK(cudaStreamSynchronize(stream));
         }
         NWORD_CREATOR_DEFINE_LR(Sync)
     };
     struct Create : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             auto device = stack.pop_string();
             auto shape = fetch_shape(stack);
             tensor_t t;
@@ -38,7 +38,7 @@ namespace nn {
     };
 
     struct Zero : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t t = stack.pop_tensor();
             t->op_zero(t);
         }
@@ -46,7 +46,7 @@ namespace nn {
     };
 
     struct Fill : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             double value = stack.pop_number();
             tensor_t t = stack.pop_tensor();
             t->op_fill(t, value);
@@ -55,7 +55,7 @@ namespace nn {
     };
 
     struct View : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             auto shape = fetch_shape(stack);
             size_t offset = stack.pop_number();
             tensor_t t = stack.pop_tensor();
@@ -66,7 +66,7 @@ namespace nn {
     };
 
     struct Copy : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t src = stack.pop_tensor();
             tensor_t dst = stack.pop_tensor();
             dst->op_copy(dst, src);
@@ -75,7 +75,7 @@ namespace nn {
     };
 
     struct Linear : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t y = stack.pop_tensor();
             tensor_t b = stack.pop_tensor();
             tensor_t w = stack.pop_tensor();
@@ -87,7 +87,7 @@ namespace nn {
     };
 
     struct Layernorm : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             float eps = stack.pop_number();
             tensor_t y = stack.pop_tensor();
             tensor_t bias = stack.pop_tensor();
@@ -103,7 +103,7 @@ namespace nn {
     };
 
     struct Transpos0213 : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t y = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
 
@@ -113,7 +113,7 @@ namespace nn {
     };
 
     struct QueryKey : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t qk = stack.pop_tensor();
             tensor_t k = stack.pop_tensor();
             tensor_t q = stack.pop_tensor();
@@ -124,7 +124,7 @@ namespace nn {
     };
 
     struct Add : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t c = stack.pop_tensor();
             tensor_t b = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
@@ -134,7 +134,7 @@ namespace nn {
     };
 
     struct Softmax : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
             x->op_softmax(x, out);
@@ -143,7 +143,7 @@ namespace nn {
     };
 
     struct Attn : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
             tensor_t value = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
@@ -153,7 +153,7 @@ namespace nn {
     };
 
     struct Gelu : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
             x->op_gelu(x, out);
@@ -165,7 +165,7 @@ namespace nn {
 
 namespace io {
     struct Dump : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             tensor_t t = stack.pop_tensor();
             t->io_dump(t);
         }
@@ -173,7 +173,7 @@ namespace io {
     };
 
     struct Load : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             std::string fileName = stack.pop_string();
             tensor_t x = stack.pop_tensor();
             x->io_load(x, fileName.c_str());
@@ -182,7 +182,7 @@ namespace io {
     };
 
     struct Save : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             std::string fileName = stack.pop_string();
             tensor_t x = stack.pop_tensor();
             x->io_save(x, fileName.c_str());
@@ -191,7 +191,7 @@ namespace io {
     };
 
     struct MPIRecv : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             int source = stack.pop_number();
             tensor_t x = stack.pop_tensor();
             x->io_mpi_recv(x, source);
@@ -200,7 +200,7 @@ namespace io {
     };
 
     struct MPIBcast : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             int root = stack.pop_number();
             tensor_t x = stack.pop_tensor();
             x->io_mpi_bcast(x, root);
@@ -209,7 +209,7 @@ namespace io {
     };
 
     struct NcclRecv : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             int source = stack.pop_number();
             tensor_t x = stack.pop_tensor();
             x->io_nccl_recv(x, source);
@@ -218,7 +218,7 @@ namespace io {
     };
 
     struct NcclSend : public NativeWord {
-        virtual void run(Stack& stack) {
+        void run(Stack& stack) override {
             int dst = stack.pop_number();
             tensor_t x = stack.pop_tensor();
             x->io_nccl_send(x, dst);

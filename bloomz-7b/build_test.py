@@ -33,5 +33,5 @@ with open( "xinput.mask.msg", "wb") as outfile:
     outfile.write(d)
 '''
 
-x = model(**tks, output_attentions = False, output_hidden_states = True );
+x = model(**tks, output_attentions = False, output_hidden_states = True, labels = tks["input_ids"] );
 

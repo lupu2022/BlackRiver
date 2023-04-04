@@ -409,6 +409,56 @@ ComputingReturn  CUDATensor<DT>::op_gelu(tensor_t self, tensor_t out) {
     return OP_TODO_ERROR;
 }
 
+template<DataType DT>
+ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  tensor_t lm_head, tensor_t output) {
+    if ( DT == DataType::Float ) {
+        int batch = self->shape().vec()[0];
+        int tokens = self->shape().vec()[1];
+        int hidden_size = self->shape().vec()[2];
+
+        int vocab_size = lm_head->shape().vec()[0];
+
+        float* mask = (float *)mask_->cpu_float()->data();
+        for (int b = 0;  b < batch; b++) {
+            float* m = &mask[b * tokens];
+            int target = 0;
+            for ( int i = 0; i < tokens - 1; i++) {
+                if ( m[i + 1] == 0 ) {
+                    target = i;
+                    break;
+                }
+            }
+            float* dst = (float *)output->cuda_float() + b * vocab_size;
+            float* x = (float *)data() + b * tokens * hidden_size + target * hidden_size;
+
+            {
+                int m = vocab_size;
+                int n = 1;
+                int k = hidden_size;
+
+                float alpha = 1.0;
+                float beta = 0.0;
+
+                float* A = (float *)lm_head->cuda_float()->data();
+                float* B = x;
+                float* C = dst;
+
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_T, CUBLAS_OP_N,
+                    m, n, k,
+                    &alpha, A, k,
+                    B, k, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::cuda_workspace_size);
+            }
+
+        }
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CUDATensor<DataType::Float>* tensor = new CUDATensor<DataType::Float>(shape);

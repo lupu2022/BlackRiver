@@ -112,6 +112,11 @@
     $tokens !
     $batch  !
 
+    
+    "_ids_" @ 0  $batch @   $tokens @  2 op.view  "ids_" !
+
+    "_mask_" @ 0  $batch @   $tokens @  2 op.view  "mask_" !
+
     ;; xinput in GPU, xinput_ in CPU
     {
         "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
@@ -191,6 +196,13 @@
         dup $batch @ $tokens @ "HIDDEN_SIZE_x4" @  * * +
  
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
+    }
+    
+    ;; output logits 
+    {
+        dup
+
+        "_var_" @ swap $batch @ "VOCAB_SIZE" @ 2 op.view "last_logits" !
     }
 
     ;; larget memroy

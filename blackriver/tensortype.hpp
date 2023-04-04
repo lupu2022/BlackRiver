@@ -134,7 +134,7 @@ public:
     TensorType(cuda_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), impl_(tensor) {};
     TensorType(cpu_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
     TensorType(cuda_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
-    ~TensorType();
+    virtual ~TensorType();
 
     // fast access
     const ShapeType& shape() const {
@@ -240,27 +240,28 @@ public:
     TransformerComputing* impl();
 
 public:
-    virtual ComputingReturn op_zero(tensor_t self);
-    virtual ComputingReturn op_fill(tensor_t self, float value);
-    virtual ComputingReturn op_copy(tensor_t self, tensor_t src);
-    virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape);
-    virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c);
-    virtual ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c);
-    virtual ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y);
-    virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps);
-    virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y);
-    virtual ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk);
-    virtual ComputingReturn op_softmax(tensor_t self, tensor_t out);
-    virtual ComputingReturn op_attn(tensor_t self, tensor_t v, tensor_t attn);
-    virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst);
+    ComputingReturn op_zero(tensor_t self) override;
+    ComputingReturn op_fill(tensor_t self, float value) override;
+    ComputingReturn op_copy(tensor_t self, tensor_t src) override;
+    std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
+    ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c) override;
+    ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
+    ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) override;
+    ComputingReturn op_transpos_0213(tensor_t self, tensor_t y) override;
+    ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk) override;
+    ComputingReturn op_softmax(tensor_t self, tensor_t out) override ;
+    ComputingReturn op_attn(tensor_t self, tensor_t v, tensor_t attn) override;
+    ComputingReturn op_gelu(tensor_t self, tensor_t dst) override;
+    ComputingReturn op_last_logits(tensor_t self, tensor_t mask,  tensor_t lm_head, tensor_t output) override;
 
-    virtual ComputingReturn io_load(tensor_t self, const char* fileName);
-    virtual ComputingReturn io_save(tensor_t self, const char* fileName);
-    virtual ComputingReturn io_dump(tensor_t self);
-    virtual ComputingReturn io_mpi_bcast(tensor_t self, int root);
-    virtual ComputingReturn io_mpi_recv(tensor_t self, int source);
-    virtual ComputingReturn io_nccl_recv(tensor_t self, int source);
-    virtual ComputingReturn io_nccl_send(tensor_t self, int dst);
+    ComputingReturn io_load(tensor_t self, const char* fileName) override;
+    ComputingReturn io_save(tensor_t self, const char* fileName) override;
+    ComputingReturn io_dump(tensor_t self) override;
+    ComputingReturn io_mpi_bcast(tensor_t self, int root) override;
+    ComputingReturn io_mpi_recv(tensor_t self, int source) override;
+    ComputingReturn io_nccl_recv(tensor_t self, int source) override;
+    ComputingReturn io_nccl_send(tensor_t self, int dst) override;
 private:
     // basic info about tensor
     ShapeType shape_;

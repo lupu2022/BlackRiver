@@ -52,25 +52,26 @@ struct CUDATensor : public TransformerComputing {
     }
 
     // Interfaces from TransformerComputing
-    virtual ComputingReturn io_dump(tensor_t self);
-    virtual ComputingReturn io_load(tensor_t self, const char* fileName);
-    virtual ComputingReturn io_nccl_send(tensor_t self, int dst);
-    virtual ComputingReturn io_nccl_recv(tensor_t self, int src);
+    ComputingReturn io_dump(tensor_t self) override;
+    ComputingReturn io_load(tensor_t self, const char* fileName) override;
+    ComputingReturn io_nccl_send(tensor_t self, int dst) override;
+    ComputingReturn io_nccl_recv(tensor_t self, int src) override;
 
-    virtual ComputingReturn op_zero(tensor_t self);
-    virtual ComputingReturn op_fill(tensor_t self, float value);
-    virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape);
-    virtual ComputingReturn op_copy(tensor_t self, tensor_t src);
-    virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c);
+    ComputingReturn op_zero(tensor_t self) override;
+    ComputingReturn op_fill(tensor_t self, float value) override;
+    std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    ComputingReturn op_copy(tensor_t self, tensor_t src) override;
+    ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
 
-    virtual ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y);
-    virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps);
+    ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
+    ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) override;
 
-    virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y);
-    virtual ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk);
-    virtual ComputingReturn op_softmax(tensor_t self, tensor_t out);
-    virtual ComputingReturn op_attn(tensor_t self, tensor_t value, tensor_t out);
-    virtual ComputingReturn op_gelu(tensor_t self, tensor_t dst);
+    ComputingReturn op_transpos_0213(tensor_t self, tensor_t y) override;
+    ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk) override;
+    ComputingReturn op_softmax(tensor_t self, tensor_t out) override;
+    ComputingReturn op_attn(tensor_t self, tensor_t value, tensor_t out) override;
+    ComputingReturn op_gelu(tensor_t self, tensor_t dst) override;
+    ComputingReturn op_last_logits(tensor_t self, tensor_t mask,  tensor_t lm_head, tensor_t output) override;
 
 private:
     void*                       mem_;

@@ -61,6 +61,10 @@
     ;; receiving alibi and mask
     {
         0 #
+        "ids_" @ 0 io.mpi.bcast
+        "mask_" @ 0 io.mpi.bcast
+
+        0 #
         "alibi_" @ 0 io.mpi.bcast
         "alibi" @ "alibi_" @ op.copy
 
@@ -212,16 +216,16 @@
     {
         15 sync_output 0 #
         
-        "xinput" @ 1 io.nccl.recv 
+        "xa" @ 1 io.nccl.recv 
         
-        "xinput" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xa" @ "LN_EPS" @ op.layernorm
+        "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xinput" @ "LN_EPS" @ op.layernorm
         
         "lm_head.weight" @ ? drop
         " TODO: backward computing... " echo 
     }
     op.sync
     
-    "xa" @ io.dump
+    "xinput" @ io.dump
     
 %end
 
@@ -229,6 +233,10 @@
     
     ;; receiving alibi & xmask
     {
+        0 #
+        "ids_" @ 0 io.mpi.bcast
+        "mask_" @ 0 io.mpi.bcast
+
         0 #
         "alibi_" @ 0 io.mpi.bcast
         "alibi" @ "alibi_" @ op.copy
