@@ -418,9 +418,9 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
 
         int vocab_size = lm_head->shape().vec()[0];
 
-        float* mask = (float *)mask_->cpu_float()->data();
+        int* mask = (int *)mask_->cpu_int()->data();
         for (int b = 0;  b < batch; b++) {
-            float* m = &mask[b * tokens];
+            int* m = &mask[b * tokens];
             int target = 0;
             for ( int i = 0; i < tokens - 1; i++) {
                 if ( m[i + 1] == 0 ) {
@@ -428,7 +428,8 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
                     break;
                 }
             }
-            float* dst = (float *)output->cuda_float() + b * vocab_size;
+
+            float* dst = (float *)output->cuda_float()->data() + b * vocab_size;
             float* x = (float *)data() + b * tokens * hidden_size + target * hidden_size;
 
             {
@@ -452,7 +453,6 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
                     ComputingContext::cuda_workspace,
                     ComputingContext::cuda_workspace_size);
             }
-
         }
         return OP_OK;
     }

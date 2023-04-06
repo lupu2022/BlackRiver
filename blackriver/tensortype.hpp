@@ -165,6 +165,12 @@ public:
         }
         return std::get<CPU_BF16>(impl_);
     }
+    cpu_int_t* cpu_int() {
+        if ( impl_.index() != CPU_INT ) {
+            br_panic("Cant get cpu_int from a tensor");
+        }
+        return std::get<CPU_INT>(impl_);
+    }
     cuda_float_t* cuda_float() {
         if ( impl_.index() != CUDA_FLOAT ) {
             br_panic("Cant get cuda_float from a tensor");

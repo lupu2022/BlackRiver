@@ -220,12 +220,11 @@
         
         "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xinput" @ "LN_EPS" @ op.layernorm
         
-        "lm_head.weight" @ ? drop
-        " TODO: backward computing... " echo 
+        "xinput" @  "mask_" @   "lm_head.weight" @  "last_logits" @  op.last_logits 
     }
     op.sync
     
-    "ids_" @ io.dump
+    "last_logits" @ io.dump
 
     "xinput" @ io.dump
     
