@@ -12,6 +12,11 @@ ComputingReturn CPUTensor<_DTYPE_>::op_zero(tensor_t self) {
         memset( mem_, 0, sizeof(float) * self->items() );
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::Int ) {
+        memset( mem_, 0, sizeof(int) * self->items() );
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
@@ -51,6 +56,13 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
         auto* newCpuTensor = new CPUTensor<DataType::Float>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
+    if ( _DTYPE_ == DataType::Int ) {
+        ShapeType newShape(newShape_);
+        int *newData = (int *)data() + offset;
+        auto* newCpuTensor = new CPUTensor<DataType::Int>(newData);
+        return std::make_shared<TensorType>(newCpuTensor, newShape);
+    }
+
     return OP_TODO_ERROR;
 }
 
@@ -74,6 +86,24 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
 
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::Int ) {
+        int* d = (int *)data();
+        std::cout << "--------------------------" << std::endl;
+        std::cout << "First " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << d[i] << " ";
+        }
+        std::cout << std::endl;
+        d = (int *)data() + self->items() - first8;
+        std::cout << "Last " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << d[i] << " ";
+        }
+        std::cout << std::endl;
+
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
@@ -114,12 +144,22 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_bcast(tensor_t self, int root) {
         MPI_Bcast(data(), self->items(), MPI_FLOAT, root, MPI_COMM_WORLD);
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::Int ) {
+        MPI_Bcast(data(), self->items(), MPI_INT, root, MPI_COMM_WORLD);
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
 
 tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CPUTensor<DataType::Float>* tensor = new CPUTensor<DataType::Float>(shape);
+    return std::make_shared<TensorType>(tensor, shape);
+}
+
+tensor_t create_cpu_int(std::vector<size_t>& shape_) {
+    ShapeType shape(shape_);
+    CPUTensor<DataType::Int>* tensor = new CPUTensor<DataType::Int>(shape);
     return std::make_shared<TensorType>(tensor, shape);
 }
 

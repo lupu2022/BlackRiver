@@ -166,7 +166,10 @@ TransformerComputing* TensorType::impl() {
         cpu_float_t* tensor = std::get<CPU_FLOAT>(impl_);
         return tensor;
     }
-
+    if ( impl_index() == ImplType::CPU_INT ) {
+        cpu_int_t* tensor = std::get<CPU_INT>(impl_);
+        return tensor;
+    }
     br_panic("Can't be here!");
     return nullptr;
 }

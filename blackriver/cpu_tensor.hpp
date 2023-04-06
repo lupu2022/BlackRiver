@@ -13,6 +13,8 @@ struct CPUTensor : public TransformerComputing {
     CPUTensor(const ShapeType& shape) {
         if ( _DTYPE_ == DataType::Float ) {
             mem_ = MemoryContext::alloc(shape.numel() * sizeof(float));
+        } else if ( _DTYPE_ == DataType::Int ) {
+            mem_ = MemoryContext::alloc(shape.numel() * sizeof(int));
         } else {
             br_panic("Can't be here!");
         }
@@ -40,6 +42,7 @@ private:
 
     friend struct CPUTensor<DataType::Float>;
     friend struct CPUTensor<DataType::BF16>;
+    friend struct CPUTensor<DataType::Int>;
 };
 
 

@@ -17,10 +17,12 @@ enum DataType {
     Float = 0,
     BF16 = 1,
     F16 = 2,
+    Int = 3,
 };
 
 inline size_t DataType_size(DataType type_) {
     switch( type_ ) {
+        case Int:
         case Float:
             return 4;
         case F16:
@@ -122,6 +124,7 @@ template <DataType _DTYPE_> struct CPUTensor;
 template <DataType _DTYPE_> struct CUDATensor;
 using cpu_float_t = CPUTensor<DataType::Float>;
 using cpu_bf16_t = CPUTensor<DataType::BF16>;
+using cpu_int_t = CPUTensor<DataType::Int>;
 using cuda_float_t = CUDATensor<DataType::Float>;
 using cuda_bf16_t = CUDATensor<DataType::BF16>;
 
@@ -134,6 +137,7 @@ public:
     TensorType(cuda_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), impl_(tensor) {};
     TensorType(cpu_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
     TensorType(cuda_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
+    TensorType(cpu_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), impl_(tensor) {};
     virtual ~TensorType();
 
     // fast access
@@ -271,11 +275,13 @@ private:
     enum ImplType {
         CPU_FLOAT,
         CPU_BF16,
+        CPU_INT,
         CUDA_FLOAT,
         CUDA_BF16,
     };
     using TensorImpl =   std::variant<  cpu_float_t*,
                                         cpu_bf16_t*,
+                                        cpu_int_t*,
                                         cuda_float_t*,
                                         cuda_bf16_t* >;
     TensorImpl impl_;
@@ -283,8 +289,7 @@ private:
 
 tensor_t create_cuda_float(std::vector<size_t>& shape);
 tensor_t create_cpu_float(std::vector<size_t>& shape);
-
-
+tensor_t create_cpu_int(std::vector<size_t>& shape);
 
 } // end of namespace br
 

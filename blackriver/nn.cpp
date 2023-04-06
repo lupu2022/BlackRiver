@@ -22,13 +22,16 @@ namespace nn {
     };
     struct Create : public NativeWord {
         void run(Stack& stack) override {
+            auto dtype = stack.pop_string();
             auto device = stack.pop_string();
             auto shape = fetch_shape(stack);
             tensor_t t;
-            if ( device == "cuda" ) {
+            if ( dtype == "float" && device == "cuda" ) {
                 t = br::create_cuda_float(shape);
-            } else if ( device == "cpu" ) {
+            } else if ( dtype == "float" && device == "cpu" ) {
                 t = br::create_cpu_float(shape);
+            } else if (dtype == "int" && device=="cpu") {
+                t = br::create_cpu_int(shape);
             } else {
                 br_panic("Can' be here!");
             }
@@ -161,6 +164,17 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Gelu)
     };
 
+    struct LastLogits : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t out = stack.pop_tensor();
+            tensor_t lm_head = stack.pop_tensor();
+            tensor_t mask = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+            x->op_last_logits(x, mask, lm_head, out);
+        }
+        NWORD_CREATOR_DEFINE_LR(LastLogits)
+    };
+
 }
 
 namespace io {
@@ -251,6 +265,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.softmax", nn::Softmax::creator);
     env.insert_native_word("op.attn", nn::Attn::creator);
     env.insert_native_word("op.gelu", nn::Gelu::creator);
+    env.insert_native_word("op.last_logits", nn::LastLogits::creator);
 }
 
 }// end of namespace br

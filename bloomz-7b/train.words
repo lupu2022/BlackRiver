@@ -225,6 +225,8 @@
     }
     op.sync
     
+    "ids_" @ io.dump
+
     "xinput" @ io.dump
     
 %end

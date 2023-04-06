@@ -16,30 +16,30 @@
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
 %def create_output
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias"    !
     
-    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) op.create "lm_head.weight" !
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) "float"  op.create "lm_head.weight" !
     
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias_g"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias_g"    !
 
-    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) op.create "lm_head.weight_g" !
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) "float"  op.create "lm_head.weight_g" !
 
 %end
 
 %def create_weight
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "word_embeddings_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "word_embeddings_layernorm.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "word_embeddings_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "word_embeddings_layernorm.bias"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "input_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create      "input_layernorm.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.bias"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.bias"    !
 
-    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight"  !
-    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                      "query_key_value.bias"    !
+    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  "float"  op.create     "query_key_value.weight"  !
+    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) "float"  op.create                      "query_key_value.bias"    !
 
     ;
     ; dummy split to three tensors, 4096 * 4096 = 16777216
@@ -52,28 +52,28 @@
     ("query_key_value.bias" @ "HIDDEN_SIZE" @       "HIDDEN_SIZE" @ 1 op.view) "key.bias"   !
     ("query_key_value.bias" @ ("HIDDEN_SIZE" @ 2 *) "HIDDEN_SIZE" @ 1 op.view) "value.bias" !
 
-    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight"  !
-    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias"    !
+    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) "float"  op.create                "dense.weight"  !
+    ("HIDDEN_SIZE" @ 1 $DEVICE @) "float"  op.create                    "dense.bias"    !
 
-    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight"  !
-    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias"    !
+    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  "float"  op.create     "dense_h_to_4h.weight"  !
+    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) "float"  op.create                       "dense_h_to_4h.bias"    !
 
-    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias"    !
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  "float"  op.create     "dense_4h_to_h.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "dense_4h_to_h.bias"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias"    !
 %end
 
 %def create_grad
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "input_layernorm.bias_g"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "input_layernorm.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "input_layernorm.bias_g"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create  "post_attention_layernorm.bias_g"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.bias_g"    !
 
-    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "query_key_value.weight_g"  !
-    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) op.create                       "query_key_value.bias_g"    !
+    ("HIDDEN_SIZE_x3" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  "float"  op.create     "query_key_value.weight_g"  !
+    ("HIDDEN_SIZE_x3" @  1 $DEVICE @) "float"  op.create                       "query_key_value.bias_g"    !
 
     ("query_key_value.weight_g" @ 0                        "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight_g" !
     ("query_key_value.weight_g" @ "HIDDEN_SQUARE" @        "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight_g" !          
@@ -83,27 +83,27 @@
     ("query_key_value.bias_g" @ "HIDDEN_SIZE" @        "HIDDEN_SIZE" @ 1 op.view) "key.bias_g"   !
     ("query_key_value.bias_g" @ ("HIDDEN_SIZE" @ 2 *)  "HIDDEN_SIZE" @ 1 op.view) "value.bias_g" !
 
-    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) op.create                "dense.weight_g"  !
-    ("HIDDEN_SIZE" @ 1 $DEVICE @) op.create                    "dense.bias_g"    !
+    ("HIDDEN_SIZE" @ dup 2 $DEVICE @) "float"  op.create                "dense.weight_g"  !
+    ("HIDDEN_SIZE" @ 1 $DEVICE @) "float"  op.create                    "dense.bias_g"    !
 
-    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  op.create     "dense_h_to_4h.weight_g"  !
-    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) op.create                       "dense_h_to_4h.bias_g"    !
+    ("HIDDEN_SIZE_x4" @  "HIDDEN_SIZE" @ 2 $DEVICE @)  "float"  op.create     "dense_h_to_4h.weight_g"  !
+    ("HIDDEN_SIZE_x4" @  1 $DEVICE @) "float"  op.create                       "dense_h_to_4h.bias_g"    !
 
-    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  op.create     "dense_4h_to_h.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create                       "dense_4h_to_h.bias_g"    !
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  "float"  op.create     "dense_4h_to_h.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "dense_4h_to_h.bias_g"    !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) op.create     "ln_f.bias_g"    !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias_g"    !
 %end
 
 %def create_var
-    1 "cuda" op.create  "_var_"     !
+    1 "cuda" "float"  op.create  "_var_"     !
    
-    16 2048 *             1 "cpu"  op.create  "_ids_"     !
-    16 2048 *             1 "cpu"  op.create  "_mask_"    !
-    "HEADS_NUM" @ 2048 *  1 "cpu"  op.create  "_alibi_"   !
-    16 2048 2048 * *      1 "cpu"  op.create  "_xmask_"   !   
-    16 2048 4096 *        1 "cpu"  op.create  "_xinput_"  !   
+    16 2048 *             1 "cpu"  "int"  op.create  "_ids_"     !
+    16 2048 *             1 "cpu"  "int"  op.create  "_mask_"    !
+    "HEADS_NUM" @ 2048 *  1 "cpu"  "float"  op.create  "_alibi_"   !
+    16 2048 2048 * *      1 "cpu"  "float"  op.create  "_xmask_"   !   
+    16 2048 4096 *        1 "cpu"  "float"  op.create  "_xinput_"  !   
 %end
 
 %def create_dynamic
