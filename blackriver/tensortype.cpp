@@ -93,8 +93,20 @@ ComputingReturn TensorType::op_gelu(tensor_t self, tensor_t dst) {
 ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t output) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_last_logits(self, mask, lm_head, output);
-    op_check(ret, "attn");
+    op_check(ret, "last_logits");
 }
+
+std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
+    br_assert(self.get() == this, "can't be here!");
+
+    auto result = impl()->op_loss_backward(self, ids, mask, lm_head, x_g, lm_head_g, workspace);
+    if ( result.index() == 0) {
+        ComputingReturn ret = std::get<0>(result);
+        op_check(ret, "loss_backward");
+    }
+    return result;
+}
+
 
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");

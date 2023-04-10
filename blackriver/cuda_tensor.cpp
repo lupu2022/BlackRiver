@@ -459,6 +459,39 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
     return OP_TODO_ERROR;
 }
 
+template<DataType DT>
+std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
+    if ( DT == DataType::Float ) {
+        int batch = self->shape().vec()[0];
+        int tokens = self->shape().vec()[1];
+        int hidden_size = self->shape().vec()[2];
+
+        int vocab_size = lm_head->shape().vec()[0];
+        size_t wsize = workspace->items();
+
+        int token_group = wsize / vocab_size;
+
+        std::cout << "**************" <<  token_group << std::endl;
+
+        /*
+        int* mask = (int *)mask_->cpu_int()->data();
+        int* ids = (int *)ids_->cpu_int()->data();
+        for (int b = 0;  b < batch; b++) {
+            int* m = &mask[b * tokens];
+            int* ip = &ids[b * tokens];
+
+
+
+        }
+        */
+
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CUDATensor<DataType::Float>* tensor = new CUDATensor<DataType::Float>(shape);

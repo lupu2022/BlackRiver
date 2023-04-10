@@ -13,6 +13,7 @@
 
 "HIDDEN_SIZE" @ 3 *     "HIDDEN_SIZE_x3"        !
 "HIDDEN_SIZE" @ 4 *     "HIDDEN_SIZE_x4"        !
+"HIDDEN_SIZE" @ 5 *     "HIDDEN_SIZE_x5"        !
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
 %def create_output
@@ -188,7 +189,7 @@
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3b" !
     }
    
-    ;; x4a x4b
+    ;; x4a x4b x5a
     {
         dup
 
@@ -196,19 +197,24 @@
         dup $batch @ $tokens @ "HIDDEN_SIZE_x4" @  * * +
  
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
+
+        dup 
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x5" @ 3 op.view "x5a" !
     }
-    
+ 
+
     ;; output logits 
     {
         dup
 
         "_var_" @ swap $batch @ "VOCAB_SIZE" @ 2 op.view "last_logits" !
+        
     }
 
     ;; larget memroy
     {
         $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
-        
+
         dup
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
         "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !

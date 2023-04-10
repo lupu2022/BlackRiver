@@ -175,6 +175,19 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(LastLogits)
     };
 
+    struct LossBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t lm_head_g = stack.pop_tensor();
+            tensor_t x_g = stack.pop_tensor();
+            tensor_t workspace = stack.pop_tensor();
+            tensor_t lm_head = stack.pop_tensor();
+            tensor_t mask = stack.pop_tensor();
+            tensor_t ids = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+            x->op_loss_backward(x, ids, mask, lm_head, workspace, x_g, lm_head_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(LastLogits)
+    };
 }
 
 namespace io {
