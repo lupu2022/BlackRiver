@@ -186,7 +186,7 @@ namespace nn {
             tensor_t x = stack.pop_tensor();
             x->op_loss_backward(x, ids, mask, lm_head, workspace, x_g, lm_head_g);
         }
-        NWORD_CREATOR_DEFINE_LR(LastLogits)
+        NWORD_CREATOR_DEFINE_LR(LossBackward)
     };
 }
 
@@ -279,6 +279,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.attn", nn::Attn::creator);
     env.insert_native_word("op.gelu", nn::Gelu::creator);
     env.insert_native_word("op.last_logits", nn::LastLogits::creator);
+    env.insert_native_word("op.loss_backward", nn::LossBackward::creator);
 }
 
 }// end of namespace br

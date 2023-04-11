@@ -472,20 +472,20 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
         int token_group = wsize / vocab_size;
 
-        std::cout << "**************" <<  token_group << std::endl;
-
-        /*
         int* mask = (int *)mask_->cpu_int()->data();
         int* ids = (int *)ids_->cpu_int()->data();
+
         for (int b = 0;  b < batch; b++) {
             int* m = &mask[b * tokens];
-            int* ip = &ids[b * tokens];
+            int* id = &ids[b * tokens];
+
+            int g = 0;
+            for (int t = 0; t < tokens - 1; t++) {
 
 
+            }
 
         }
-        */
-
 
         return OP_OK;
     }

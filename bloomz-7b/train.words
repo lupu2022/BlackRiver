@@ -355,9 +355,9 @@
         ;; computing logits of last toeken 
         ;;
         "xinput" @  "mask_" @   "lm_head.weight" @  "last_logits" @  op.last_logits 
-    
         
-        
+        ;; "xinput" @  "ids_" @  "mask_" @  "lm_head.weight" @  "last_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
+         
     }
     op.sync
     
