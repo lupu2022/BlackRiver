@@ -62,7 +62,8 @@ ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
         void* x = src.data();
         void* y = data();
 
-        CUBLAS_CHECK( cublasSetVector(self->items(), sizeof(float), x, 1, y, 1) );
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(y, x, src.size() * sizeof(float), cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
 

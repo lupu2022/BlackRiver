@@ -494,6 +494,15 @@ namespace base {
         NWORD_CREATOR_DEFINE_LR(Div)
     };
 
+    struct IntDiv : public NativeWord {
+        void run(Stack& stack) override {
+            double a = stack.pop_number();
+            double b = stack.pop_number();
+            stack.push_number( (int)(b / a) );
+        }
+        NWORD_CREATOR_DEFINE_LR(IntDiv)
+    };
+
     struct Combin : public NativeWord {
         void run(Stack& stack) override {
             auto a = stack.pop_string();
@@ -528,6 +537,7 @@ void Enviroment::load_base_words() {
     insert_native_word("-", base::Sub::creator );
     insert_native_word("*", base::Mul::creator );
     insert_native_word("/", base::Div::creator );
+    insert_native_word("//", base::IntDiv::creator );
 
     insert_native_word("|", base::Combin::creator );
     insert_native_word("echo", base::Echo::creator );

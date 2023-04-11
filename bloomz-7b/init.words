@@ -16,23 +16,7 @@
 "HIDDEN_SIZE" @ 5 *     "HIDDEN_SIZE_x5"        !
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
-%def create_output
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias"    !
-    
-    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) "float"  op.create "lm_head.weight" !
-    
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias_g"    !
-
-    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @) "float"  op.create "lm_head.weight_g" !
-
-%end
-
-%def create_weight
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "word_embeddings_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "word_embeddings_layernorm.bias"    !
-
+%def create_layer_weight
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.bias"    !
 
@@ -61,14 +45,11 @@
 
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  "float"  op.create     "dense_4h_to_h.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "dense_4h_to_h.bias"    !
-
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias"    !
 %end
 
-%def create_grad
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "input_layernorm.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "input_layernorm.bias_g"    !
+%def create_layer_grad
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.weight_g"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.bias_g"    !
 
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.weight_g"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create  "post_attention_layernorm.bias_g"    !
@@ -92,142 +73,9 @@
 
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE_x4" @ 2 $DEVICE @)  "float"  op.create     "dense_4h_to_h.weight_g"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create                       "dense_4h_to_h.bias_g"    !
-
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.weight_g"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create     "ln_f.bias_g"    !
 %end
 
-%def create_var
-    1 "cuda" "float"  op.create  "_var_"     !
-   
-    16 2048 *             1 "cpu"  "int"  op.create  "_ids_"     !
-    16 2048 *             1 "cpu"  "int"  op.create  "_mask_"    !
-    "HEADS_NUM" @ 2048 *  1 "cpu"  "float"  op.create  "_alibi_"   !
-    16 2048 2048 * *      1 "cpu"  "float"  op.create  "_xmask_"   !   
-    16 2048 4096 *        1 "cpu"  "float"  op.create  "_xinput_"  !   
-%end
-
-%def create_dynamic
-    0 #
-
-    $tokens !
-    $batch  !
-
-    
-    "_ids_" @ 0  $batch @   $tokens @  2 op.view  "ids_" !
-
-    "_mask_" @ 0  $batch @   $tokens @  2 op.view  "mask_" !
-
-    ;; xinput in GPU, xinput_ in CPU
-    {
-        "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
-        "_xinput_" @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput_" !
-
-        $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
-    }
-   
-    ;; alibi in GPU, alibi_ in CPU
-    {
-        dup
-        "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi" ! 
-        "_alibi_" @ 0   1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi_" ! 
-    
-        "HEADS_NUM" @ $tokens @ * +  
-    }
-
-    ;; xmask in GPU, xmask_ in CPU
-    {
-        dup
-        "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask"  ! 
-        "_xmask_" @ 0  $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask_" ! 
-    
-        $batch @ $tokens @ $tokens @ * * +
-    }
-
-    ;; xa, xb, xc, xd, xe
-    {
-        dup  
-
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ya" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "za" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-        
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xb" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yb" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zb" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xc" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yc" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zc" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-        
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xd" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-        
-        dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xe" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ye" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "ze" !
-    }
-    
-    ;; x3a x3b
-    {
-        dup
-
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3a" !
-        dup $batch @ $tokens @ "HIDDEN_SIZE_x3" @  * * +
-
-
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3b" !
-    }
-   
-    ;; x4a x4b x5a
-    {
-        dup
-
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
-        dup $batch @ $tokens @ "HIDDEN_SIZE_x4" @  * * +
- 
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
-
-        dup 
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x5" @ 3 op.view "x5a" !
-    }
- 
-
-    ;; output logits 
-    {
-        dup
-
-        "_var_" @ swap $batch @ "VOCAB_SIZE" @ 2 op.view "last_logits" !
-        
-    }
-
-    ;; larget memroy
-    {
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
-
-        dup
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
-        "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
-    }
-    
-    $tokens !!
-    $batch !!
-
-%end
-
-
-
-%def zero_grad
+%def zero_layer_grad
     "input_layernorm.weight_g" @  op.zero
     "input_layernorm.bias_g" @ op.zero
     
@@ -247,12 +95,41 @@
     "post_attention_layernorm.bias_g" @   op.zero
 %end
 
-%def load_weight
-    dup 
-    ">>>Begin load weight..." swap |  echo
+%def create_main_weight
+    "HIDDEN_SIZE" @  1 "cuda"  "float"  op.create      "word_embeddings_layernorm.weight"  !
+    "HIDDEN_SIZE" @  1 "cuda"  "float"  op.create      "word_embeddings_layernorm.bias"    !
 
-    "header" !
-     
+    "HIDDEN_SIZE" @  1 "cuda"  "float"  op.create     "ln_f.weight"  !
+    "HIDDEN_SIZE" @  1 "cuda"  "float"  op.create     "ln_f.bias"    !
+    
+    "cuda" $DEVICE ! create_layer_weight
+
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 "cpu") "float"  op.create "lm_head.weight_" !
+%end
+
+%def create_main_grad
+    "HIDDEN_SIZE" @  1 "cuda" "float"  op.create      "word_embeddings_layernorm.weight_g"  !
+    "HIDDEN_SIZE" @  1 "cuda" "float"  op.create      "word_embeddings_layernorm.bias_g"    !
+
+    "HIDDEN_SIZE" @  1 "cuda" "float"  op.create     "ln_f.weight_g"  !
+    "HIDDEN_SIZE" @  1 "cuda" "float"  op.create     "ln_f.bias_g"    !
+    
+    "cuda" $DEVICE ! create_layer_grad 
+
+    ("VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 "cpu") "float"  op.create "lm_head.weight_g_" !
+%end
+
+%def zero_main_grad
+    "word_embeddings_layernorm.weight_g" @ op.zero
+    "word_embeddings_layernorm.bias_g" @ op.zero
+    "ln_f.weight_g" @ op.zero
+    "ln_f.bias_g" @ op.zero
+
+    "lm_head.weight_g_" @ op.zero
+%end
+
+%def load_main_weight
+    "Begin load main weight..." echo
     {
         "word_embeddings_layernorm.weight" @
         "MSG_FILES_PATH" @  "word_embeddings_layernorm.weight.bin"  | 
@@ -262,7 +139,29 @@
         "MSG_FILES_PATH" @  "word_embeddings_layernorm.bias.bin"  | 
         io.load
     }
+    
+    {
+        "ln_f.weight" @
+        "MSG_FILES_PATH" @  "ln_f.weight.bin"  | 
+        io.load
+        
+        "ln_f.bias" @
+        "MSG_FILES_PATH" @  "ln_f.bias.bin"  | 
+        io.load
+    }
 
+    "lm_head.weight_" @
+    "MSG_FILES_PATH" @  "lm_head.weight.bin" | 
+    io.load
+
+    "End load main weight..." echo
+%end
+
+%def load_layer_weight
+    dup 
+    ">>>Begin load layer weight..." swap |  echo
+
+    "header" !
     {
         "input_layernorm.weight" @
         "MSG_FILES_PATH" @  "header" @  | ".input_layernorm.weight.bin" | 
@@ -329,55 +228,10 @@
     ">>>End load weight..." echo
 %end
 
-
-%def load_output
-    ">>>Begin load output ..." echo   
-   
-    {
-        "ln_f.weight" @ 
-        "MSG_FILES_PATH" @  "ln_f.weight.bin" | 
-        io.load
-
-        "ln_f.bias" @
-        "MSG_FILES_PATH" @  "ln_f.bias.bin" | 
-        io.load
-    }
-
-    "lm_head.weight" @
-    "MSG_FILES_PATH" @  "lm_head.weight.bin" | 
-    io.load
-
-    ">>>End load output ..." echo   
-%end
-
-%def sync_output
-    dup 
-
-    0 # "ln_f.weight" @ 
-    swap # "ln_f.weight" @ op.copy 
-    dup    
-
-    0 # "ln_f.bias" @ 
-    swap # "ln_f.bias" @ op.copy 
-    
-    0 # "lm_head.weight" @
-    swap # "lm_head.weight" @ op.copy 
-
-%end
-
-
-%def sync
-    ">>>Begin sync with GPU..." echo
+%def sync_layer
+    ">>>Begin sync layer with GPU..." echo
     dup
  
-    0 #        "word_embeddings_layernorm.weight" @  
-    swap #     "word_embeddings_layernorm.weight" @  op.copy
-    dup
-  
-    0 #        "word_embeddings_layernorm.bias" @
-    swap #     "word_embeddings_layernorm.bias" @    op.copy 
-    dup
-
     0 #        "input_layernorm.weight" @  
     swap #     "input_layernorm.weight" @  op.copy
     dup

@@ -24,8 +24,28 @@ ComputingReturn TensorType::op_copy(tensor_t self, tensor_t src) {
     op_check(ret, "copy");
 }
 
-std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) {
+std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_) {
     br_assert(self.get() == this, "can't be here!");
+    int dynamic = -1;
+    size_t sub_size = 1;
+    for (size_t i = 0; i < newShape_.size(); i++) {
+        if ( newShape_[i] == 0 ) {
+            if ( dynamic == -1 ) {
+                dynamic = i;
+            } else {
+                br_panic("dynamic view must has one zero shape");
+            }
+        } else {
+            sub_size = sub_size * newShape_[i];
+        }
+    }
+
+    std::vector<size_t> newShape = newShape_;
+    if ( dynamic >= 0 ) {
+        size_t d = (self->items() - offset) / sub_size;
+        newShape[dynamic] = d;
+    }
+
     ShapeType s(newShape);
     br_assert(offset + s.numel() <= items() , "view out of shape!");
     auto result = impl()->op_view(self, offset, newShape);
@@ -99,7 +119,7 @@ ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_
 std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
     br_assert(self.get() == this, "can't be here!");
 
-    auto result = impl()->op_loss_backward(self, ids, mask, lm_head, x_g, lm_head_g, workspace);
+    auto result = impl()->op_loss_backward(self, ids, mask, lm_head, workspace, x_g, lm_head_g);
     if ( result.index() == 0) {
         ComputingReturn ret = std::get<0>(result);
         op_check(ret, "loss_backward");

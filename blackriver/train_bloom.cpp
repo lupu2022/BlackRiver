@@ -130,39 +130,38 @@ struct BloomAttentions {
 
         // 0th hash  is used in GPU
         env_->change(0);
-        env_->hash().set("$DEVICE", "cuda");
         env_->run(init_wd);
-        env_->execute("create_weight");
-        env_->execute("create_grad");
+        if ( br::CollectiveContext::mpi_rank == 1 ) {
+            env_->execute("create_main_weight");
+            env_->execute("create_main_grad");
+            env_->execute("load_main_weight");
 
-        size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
-        std::stringstream ss;
-        ss << total_var << " create_var";
-        env_->execute( ss.str() );
+        } else if ( br::CollectiveContext::mpi_rank == 2) {
+            env_->execute(" 'cuda' $DEVICE ! create_layer_weight create_layer_grad ");
+        }
 
         // others is used in CPU
         for (size_t i = 1; i < env_->hashes_num(); i++) {
             env_->change(i);
             env_->hash().set("$DEVICE", "cpu");
             env_->run( init_wd );
-            env_->execute("create_weight");
-            env_->execute("create_grad");
+            env_->execute("create_layer_weight");
+            env_->execute("create_layer_grad");
 
             std::stringstream ss;
-            ss << "'" << layers_[i-1] << "' load_weight";
+            ss << "'" << layers_[i-1] << "' load_layer_weight";
             env_->execute( ss.str() );
-            env_->execute( "zero_grad" );
-
-            if ( (br::CollectiveContext::nccl_rank == 0)  && (i == layers_.size()) ) {
-                env_->execute("create_output");
-                env_->execute("load_output");
-            }
         }
         delete init_wd;
 
         std::string train_code = fileToString("model/train.words");
         env_->change(0);
         env_->execute(train_code);
+
+        size_t total_var = 1024l * 1024 * 1024 * 2 + 1024l*1024*256;
+        std::stringstream ss;
+        ss << total_var << " create_var";
+        env_->execute( ss.str() );
     }
 
     ~BloomAttentions() {
@@ -207,7 +206,7 @@ int main(int argc, char* argv[] ) {
 
         delete in;
     } else if ( br::CollectiveContext::mpi_rank == 1) {
-        br::MemoryContext::boot( MEM_CTX_SIZE + 7l*1024*1024*1024 );
+        br::MemoryContext::boot( MEM_CTX_SIZE + 7l*1024*1024*1024);
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
 
         std::vector<const char*> layers{"h0", "h2", "h4", "h6", "h8", "h10", "h12", "h14", "h16", "h18", "h20", "h22", "h24", "h26", "h28"};
