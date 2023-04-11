@@ -26,7 +26,7 @@ void ComputingContext::boot(int cud) {
     CUDNN_CHECK(cudnnCreate(&cudnn_handle));
     CUDNN_CHECK(cudnnSetStream(cudnn_handle, cuda_stream));
 
-    cuda_workspace_size = 1024 * 1024 * 32;
+    cuda_workspace_size = 1024 * 1024 * 32 * 4;
     CUDA_CHECK( cudaMalloc(&cuda_workspace, cuda_workspace_size) );
 }
 

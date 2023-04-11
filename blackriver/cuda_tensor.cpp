@@ -460,6 +460,7 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
     return OP_TODO_ERROR;
 }
 
+
 template<DataType DT>
 std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
     if ( DT == DataType::Float ) {
@@ -475,16 +476,87 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
         int* mask = (int *)mask_->cpu_int()->data();
         int* ids = (int *)ids_->cpu_int()->data();
 
+        double total_loss = 0.0;
+        int total_items = 0;
+
+        auto stream = ComputingContext::cuda_stream;
         for (int b = 0;  b < batch; b++) {
             int* m = &mask[b * tokens];
             int* id = &ids[b * tokens];
 
-            int g = 0;
+            std::vector<int> groups;
             for (int t = 0; t < tokens - 1; t++) {
+                bool do_logits = false;
+                if ( m[t] == 0) {
+                    do_logits = true;
+                } else {
+                    groups.push_back(t);
+                    if ( groups.size() == token_group ) {
+                        do_logits = true;
+                    }
+                }
+                if ( t == tokens - 2 ) {
+                    do_logits = true;
+                }
+                if ( do_logits && groups.size() > 0 ) {
 
+                    float* dst = (float *)workspace->cuda_float()->data();
+                    float* x = (float *)data() + b * tokens * hidden_size + groups[0] * hidden_size;
 
+                    {
+                        int m = vocab_size;
+                        int n = groups.size();
+                        int k = hidden_size;
+
+                        float alpha = 1.0;
+                        float beta = 0.0;
+
+                        float* A = (float *)lm_head->cuda_float()->data();
+                        float* B = x;
+                        float* C = dst;
+
+                        kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                            CUBLAS_OP_T, CUBLAS_OP_N,
+                            m, n, k,
+                            &alpha, A, k,
+                            B, k, &beta,
+                            C, m,
+                            ComputingContext::cuda_workspace,
+                            ComputingContext::cuda_workspace_size);
+
+                        auto xdesc = create_cudnn_td_with({ (size_t)n, (size_t)vocab_size, 1, 1});
+                        auto ydesc = create_cudnn_td_with({ (size_t)n, (size_t)vocab_size, 1, 1});
+                        CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
+                                          CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
+                                          &alpha, xdesc, dst, &beta, ydesc, dst) );
+
+                        /*
+                        // select max value of softmax
+                        cudnnReduceTensorDescriptor_t reduceDesc;
+
+                        CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
+                        CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
+                                                                    CUDNN_REDUCE_TENSOR_MAX, CUDNN_DATA_FLOAT,
+                                                                    CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_FLATTENED_INDICES, CUDNN_32BIT_INDICES) );
+
+                        float* c = (float *) br::ComputingContext::cuda_workspace;
+                        int* ind = (int *)(c + 2048);
+                        float* w = c + 4096;
+                        size_t isize = 2048 * sizeof(int);
+                        size_t wsize = br::ComputingContext::cuda_workspace_size - 4096 * sizeof(float);
+
+                        auto  cdesc = create_cudnn_td_with({(size_t)n, 1, 1, 1});
+                        CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
+                                                       reduceDesc,
+                                                       ind, isize , w, wsize,
+                                                       &alpha, xdesc, dst, &beta, cdesc, c) );
+
+                        CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
+                        */
+                    }
+                    groups.clear();
+                }
             }
-
         }
 
         return OP_OK;
