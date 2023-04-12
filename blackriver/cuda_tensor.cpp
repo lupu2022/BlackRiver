@@ -522,7 +522,6 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                 bool do_logits = false;
                 if ( m[t] == 0) {
                     do_logits = true;
-                    //groups.pop_back();
                 } else {
                     groups.push_back(t);
                     if ( groups.size() == (size_t)token_group ) {
@@ -569,15 +568,15 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                         int* id_ = (int *) br::ComputingContext::cuda_workspace;
                         float* out_ = (float *)id_ + split;
 
-                        CUDA_CHECK(cudaMemcpyAsync(id_, &id[groups[0]+1], n * sizeof(int), cudaMemcpyHostToDevice, stream));
-                        kernels::nllloss_forward(id_, dst, out_, n, vocab_size, stream);
+                        CUDA_CHECK(cudaMemcpyAsync(id_, &id[groups[0]+1], (n - 1) * sizeof(int), cudaMemcpyHostToDevice, stream));
+                        kernels::nllloss_forward(id_, dst, out_, n - 1, vocab_size, stream);
 
                         float allSum;
                         CUDA_CHECK(cudaMemcpyAsync(&allSum, out_, sizeof(float), cudaMemcpyDeviceToHost, stream));
                         CUDA_CHECK(cudaStreamSynchronize(stream));
 
                         total_loss += allSum;
-                        total_items += groups.size();
+                        total_items += (groups.size() - 1);
                     }
                     groups.clear();
                 }
