@@ -11,7 +11,8 @@ cublasHandle_t ComputingContext::cublas_handle = nullptr;
 cublasLtHandle_t ComputingContext::cublasLt_handle = nullptr;
 cudnnHandle_t ComputingContext::cudnn_handle = nullptr;
 void* ComputingContext::cuda_workspace = nullptr;
-size_t ComputingContext::cuda_workspace_size = 0;
+void* ComputingContext::local_workspace = nullptr;
+size_t ComputingContext::workspace_size = 0;
 
 void ComputingContext::boot(int cud) {
     cuda_device = cud;
@@ -26,11 +27,13 @@ void ComputingContext::boot(int cud) {
     CUDNN_CHECK(cudnnCreate(&cudnn_handle));
     CUDNN_CHECK(cudnnSetStream(cudnn_handle, cuda_stream));
 
-    cuda_workspace_size = 1024 * 1024 * 32 * 4;
-    CUDA_CHECK( cudaMalloc(&cuda_workspace, cuda_workspace_size) );
+    workspace_size = 1024 * 1024 * 32 * 4;
+    CUDA_CHECK( cudaMalloc(&cuda_workspace, workspace_size) );
+    local_workspace = malloc( workspace_size );
 }
 
 void ComputingContext::shutdown() {
+    free(local_workspace);
     CUDA_CHECK( cudaFree(cuda_workspace) );
     CUDNN_CHECK( cudnnDestroy(cudnn_handle) );
     CUBLAS_CHECK( cublasLtDestroy(cublasLt_handle) );

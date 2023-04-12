@@ -13,7 +13,8 @@ struct ComputingContext {
     static cudnnHandle_t cudnn_handle;
 
     static void* cuda_workspace;
-    static size_t cuda_workspace_size;
+    static void* local_workspace;
+    static size_t workspace_size;
 
     static void boot(int cud);
     static void shutdown();

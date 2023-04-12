@@ -23,7 +23,7 @@ void launch_curand_init(int total_count, int dim, cudaStream_t stream);
 
 void launch_layer_norm_float(float *ln_res, float *vars, float *means, const float *inp,
                        const float *scale, const float *bias, int batch_size,
-                       int hidden_dim, cudaStream_t stream);
+                       int hidden_dim, float eps, cudaStream_t stream);
 
 template <typename T>
 void launch_ln_bw(T *gamma_grad, T *betta_grad, T *inp_grad, const T *out_grad,
@@ -543,6 +543,7 @@ __inline__ std::vector<LSLayout> getLSLayout(std::string layout) {
 }
 
 int gelu_forward(const float* src, float* target, int nElementNumber, cudaStream_t stream);
+int nllloss_forward(const int* ids, const float* logsoftmax, float *output, int n, int vocab, cudaStream_t stream);
 
 /// Sample wrapper executing single precision gemm with cublasLtMatmul, nearly a drop-in replacement for cublasSgemm,
 /// with addition of the workspace to support split-K algorithms

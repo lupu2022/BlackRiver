@@ -25,6 +25,7 @@ find_package(Threads REQUIRED)
 add_library(kernels STATIC LtSgemm.cu
                            LtSgemmBatched.cu
                            gelu.cu
+                           nll_loss.cu
                            normalize_kernels.cu
                            transform_kernels.cu
                            softmax_kernels.cu )

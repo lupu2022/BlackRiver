@@ -174,7 +174,7 @@ ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b
                 B, k, &beta,
                 C, m,
                 ComputingContext::cuda_workspace,
-                ComputingContext::cuda_workspace_size);
+                ComputingContext::workspace_size);
 
         {
             auto ydesc = y->create_cudnn_td_with({batch, 1, tokens, outSize});
@@ -246,7 +246,7 @@ ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tenso
 
         auto stream = ComputingContext::cuda_stream;
         kernels::launch_layer_norm_float((float *)out->data(), (float *)v->data(), (float *)m->data(),
-                                 (float *)x->data(), (float *)s->data(), (float *)b->data(), batch, hidden, stream);
+                                 (float *)x->data(), (float *)s->data(), (float *)b->data(), batch, hidden, eps, stream);
 
         return OP_OK;
     }
@@ -306,7 +306,7 @@ ComputingReturn  CUDATensor<DT>::op_qk(tensor_t self, tensor_t k_, tensor_t qk_)
                     B, k, &beta,
                     C, m,
                     ComputingContext::cuda_workspace,
-                    ComputingContext::cuda_workspace_size);
+                    ComputingContext::workspace_size);
         }
 #else
         float* B = (float *)data();
@@ -320,7 +320,7 @@ ComputingReturn  CUDATensor<DT>::op_qk(tensor_t self, tensor_t k_, tensor_t qk_)
                 C, m,
                 batch * heads,
                 ComputingContext::cuda_workspace,
-                ComputingContext::cuda_workspace_size);
+                ComputingContext::workspace_size);
 #endif
 
         return OP_OK;
@@ -388,7 +388,7 @@ ComputingReturn  CUDATensor<DT>::op_attn(tensor_t self, tensor_t value_, tensor_
                     B, k, &beta,
                     C, m,
                     ComputingContext::cuda_workspace,
-                    ComputingContext::cuda_workspace_size);
+                    ComputingContext::workspace_size);
         }
 
         return OP_OK;
@@ -452,7 +452,7 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
                     B, k, &beta,
                     C, m,
                     ComputingContext::cuda_workspace,
-                    ComputingContext::cuda_workspace_size);
+                    ComputingContext::workspace_size);
             }
         }
         return OP_OK;
@@ -522,13 +522,14 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                             B, k, &beta,
                             C, m,
                             ComputingContext::cuda_workspace,
-                            ComputingContext::cuda_workspace_size);
+                            ComputingContext::workspace_size);
 
                         auto xdesc = create_cudnn_td_with({ (size_t)n, (size_t)vocab_size, 1, 1});
                         auto ydesc = create_cudnn_td_with({ (size_t)n, (size_t)vocab_size, 1, 1});
                         CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
                                           CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
                                           &alpha, xdesc, dst, &beta, ydesc, dst) );
+
 
                         /*
                         // select max value of softmax
@@ -539,11 +540,13 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                                                                     CUDNN_REDUCE_TENSOR_MAX, CUDNN_DATA_FLOAT,
                                                                     CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_FLATTENED_INDICES, CUDNN_32BIT_INDICES) );
 
+                        int split = n + 1024;
+                        split = split - split % 1024;
                         float* c = (float *) br::ComputingContext::cuda_workspace;
-                        int* ind = (int *)(c + 2048);
-                        float* w = c + 4096;
-                        size_t isize = 2048 * sizeof(int);
-                        size_t wsize = br::ComputingContext::cuda_workspace_size - 4096 * sizeof(float);
+                        int* ind = (int *)(c + split);
+                        float* w = c + split * 2;
+                        size_t isize = split * sizeof(int);
+                        size_t wsize = br::ComputingContext::workspace_size - split * 2 * sizeof(float);
 
                         auto  cdesc = create_cudnn_td_with({(size_t)n, 1, 1, 1});
                         CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
@@ -552,8 +555,17 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                                                        &alpha, xdesc, dst, &beta, cdesc, c) );
 
                         CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
+
+                        std::vector<int> ind_;
+                        ind_.resize(split, 0);
+                        CUDA_CHECK(cudaMemcpyAsync(ind_.data(), ind, ind_.size() * sizeof(int), cudaMemcpyDeviceToHost, stream));
+                        CUDA_CHECK(cudaStreamSynchronize(stream));
                         */
                     }
+
+
+
+
                     groups.clear();
                 }
             }
