@@ -115,7 +115,7 @@
        
         "VOCAB_SIZE" @  "HIDDEN_SIZE" @ * +
     
-        "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  ?  "last_logits" !
+        "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "last_logits" !
     }
 
     ;; larget memroy

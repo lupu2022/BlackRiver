@@ -6,6 +6,8 @@ checkpoint = "bigscience/bloomz-7b1-mt"
 model = AutoModelForCausalLM.from_pretrained(checkpoint)
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
+model.eval();
+
 text = [
 '''
 All three calls return the length of the message on successful completion.
@@ -37,6 +39,6 @@ labels = tks["input_ids"];
 
 mask = tks["attention_mask"];
 
-labels = torch.masked_fill(labels, mask, -100);
+labels = torch.masked_fill(labels, mask == 0, -100);
 x = model(**tks, output_attentions = False, output_hidden_states = True, labels = labels );
 

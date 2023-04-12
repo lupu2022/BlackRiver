@@ -460,6 +460,39 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
     return OP_TODO_ERROR;
 }
 
+/*
+// A working reduce API caller
+//
+// select max value of softmax
+cudnnReduceTensorDescriptor_t reduceDesc;
+
+CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
+CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
+                                            CUDNN_REDUCE_TENSOR_MAX, CUDNN_DATA_FLOAT,
+                                            CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_FLATTENED_INDICES, CUDNN_32BIT_INDICES) );
+
+int split = n + 1024;
+split = split - split % 1024;
+float* c = (float *) br::ComputingContext::cuda_workspace;
+int* ind = (int *)(c + split);
+float* w = c + split * 2;
+size_t isize = split * sizeof(int);
+size_t wsize = br::ComputingContext::workspace_size - split * 2 * sizeof(float);
+
+auto  cdesc = create_cudnn_td_with({(size_t)n, 1, 1, 1});
+CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
+                                reduceDesc,
+                                ind, isize , w, wsize,
+                                &alpha, xdesc, dst, &beta, cdesc, c) );
+
+CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
+
+std::vector<int> ind_;
+ind_.resize(split, 0);
+CUDA_CHECK(cudaMemcpyAsync(ind_.data(), ind, ind_.size() * sizeof(int), cudaMemcpyDeviceToHost, stream));
+CUDA_CHECK(cudaStreamSynchronize(stream));
+*/
+
 
 template<DataType DT>
 std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
@@ -489,9 +522,10 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                 bool do_logits = false;
                 if ( m[t] == 0) {
                     do_logits = true;
+                    //groups.pop_back();
                 } else {
                     groups.push_back(t);
-                    if ( groups.size() == token_group ) {
+                    if ( groups.size() == (size_t)token_group ) {
                         do_logits = true;
                     }
                 }
@@ -530,47 +564,27 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                                           CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
                                           &alpha, xdesc, dst, &beta, ydesc, dst) );
 
-
-                        /*
-                        // select max value of softmax
-                        cudnnReduceTensorDescriptor_t reduceDesc;
-
-                        CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
-                        CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
-                                                                    CUDNN_REDUCE_TENSOR_MAX, CUDNN_DATA_FLOAT,
-                                                                    CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_FLATTENED_INDICES, CUDNN_32BIT_INDICES) );
-
                         int split = n + 1024;
                         split = split - split % 1024;
-                        float* c = (float *) br::ComputingContext::cuda_workspace;
-                        int* ind = (int *)(c + split);
-                        float* w = c + split * 2;
-                        size_t isize = split * sizeof(int);
-                        size_t wsize = br::ComputingContext::workspace_size - split * 2 * sizeof(float);
+                        int* id_ = (int *) br::ComputingContext::cuda_workspace;
+                        float* out_ = (float *)id_ + split;
 
-                        auto  cdesc = create_cudnn_td_with({(size_t)n, 1, 1, 1});
-                        CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
-                                                       reduceDesc,
-                                                       ind, isize , w, wsize,
-                                                       &alpha, xdesc, dst, &beta, cdesc, c) );
+                        CUDA_CHECK(cudaMemcpyAsync(id_, &id[groups[0]+1], n * sizeof(int), cudaMemcpyHostToDevice, stream));
+                        kernels::nllloss_forward(id_, dst, out_, n, vocab_size, stream);
 
-                        CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
-
-                        std::vector<int> ind_;
-                        ind_.resize(split, 0);
-                        CUDA_CHECK(cudaMemcpyAsync(ind_.data(), ind, ind_.size() * sizeof(int), cudaMemcpyDeviceToHost, stream));
+                        float allSum;
+                        CUDA_CHECK(cudaMemcpyAsync(&allSum, out_, sizeof(float), cudaMemcpyDeviceToHost, stream));
                         CUDA_CHECK(cudaStreamSynchronize(stream));
-                        */
+
+                        total_loss += allSum;
+                        total_items += groups.size();
                     }
-
-
-
-
                     groups.clear();
                 }
             }
         }
 
+        std::cout << " ################# " << total_loss << " " << total_items << " " << total_loss / total_items << std::endl;
         return OP_OK;
     }
     return OP_TODO_ERROR;
