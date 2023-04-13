@@ -543,7 +543,7 @@ __inline__ std::vector<LSLayout> getLSLayout(std::string layout) {
 }
 
 int gelu_forward(const float* src, float* target, int nElementNumber, cudaStream_t stream);
-int nllloss_forward(const int* ids, const float* logsoftmax, float *output, int n, int vocab, cudaStream_t stream);
+int nllloss_forward(const int* ids, const float* logsoftmax, float* output, float* dout, int n, int vocab, cudaStream_t stream);
 
 /// Sample wrapper executing single precision gemm with cublasLtMatmul, nearly a drop-in replacement for cublasSgemm,
 /// with addition of the workspace to support split-K algorithms
