@@ -521,6 +521,26 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
         }
 
         static void vocab_grad_x(int vsize, int gsize, int hsize, float* lm_head, float* dx, float* dst) {
+            // computing vocab embedding
+            int m = hsize;
+            int n = gsize;
+            int k = vsize;
+
+            float alpha = 1.0;
+            float beta = 0;
+
+            float* A = lm_head;
+            float* B = dst;
+            float* C = dx;
+
+            kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                            CUBLAS_OP_N, CUBLAS_OP_N,
+                            m, n, k,
+                            &alpha, A, m,
+                            B, k, &beta,
+                            C, m,
+                            ComputingContext::cuda_workspace,
+                            ComputingContext::workspace_size);
 
         }
 
@@ -641,6 +661,7 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                         float loss = _::logits_loss(vocab_size, id_group.size(), loss_scale, id_group.data(), dst_a, dst_b);
                         total_loss += loss;
 
+
                         // log softmax backward
                         {
                             float alpha = 1.0;
@@ -652,11 +673,14 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                             CUDNN_CHECK( cudnnSoftmaxBackward( ComputingContext::cudnn_handle,
                                             CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
                                             &alpha, ydesc, dst_a, dydesc, dst_b, &beta, dxdesc, dst_b) );
+
                         }
 
                         // computing x_grad
                         _::vocab_grad_x(vocab_size, id_group.size(), hidden_size,
-                                        lm, dx, dst_a);
+                                        lm, dx, dst_b);
+
+
                     }
                     id_group.clear();
                 }

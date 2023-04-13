@@ -115,7 +115,7 @@
        
         "VOCAB_SIZE" @  "HIDDEN_SIZE" @ * +
     
-        "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "last_logits" !
+        "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "all_logits" !
     }
 
     ;; larget memroy
@@ -354,13 +354,13 @@
         
         ;; computing logits of last toeken 
         ;;
-        ;;"xinput" @  "mask_" @   "lm_head.weight" @  "last_logits" @  op.last_logits 
+        ;;"xinput" @  "mask_" @   "lm_head.weight" @  "all_logits" @  op.all_logits 
         
-        "xinput" @  "ids_" @  "mask_" @  "lm_head.weight" @  "last_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
+        "xinput" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
     }
     op.sync
-    
-    "last_logits" @ io.dump
+
+    "xa" @ io.dump
 %end
 
 %def train_1
