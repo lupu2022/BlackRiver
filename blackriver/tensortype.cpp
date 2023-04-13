@@ -116,10 +116,10 @@ ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_
     op_check(ret, "last_logits");
 }
 
-std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
+std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) {
     br_assert(self.get() == this, "can't be here!");
 
-    auto result = impl()->op_loss_backward(self, ids, mask, lm_head, workspace, x_g, lm_head_g);
+    auto result = impl()->op_loss_backward(self, ids, mask, lm_head, all_logits, x_g, lm_head_g);
     if ( result.index() == 0) {
         ComputingReturn ret = std::get<0>(result);
         op_check(ret, "loss_backward");

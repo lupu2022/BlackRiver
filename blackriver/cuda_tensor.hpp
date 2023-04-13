@@ -72,7 +72,7 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_attn(tensor_t self, tensor_t value, tensor_t out) override;
     ComputingReturn op_gelu(tensor_t self, tensor_t dst) override;
     ComputingReturn op_last_logits(tensor_t self, tensor_t mask,  tensor_t lm_head, tensor_t output) override;
-    std::variant<ComputingReturn, float> op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) override;
+    std::variant<ComputingReturn, float> op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) override;
 
 private:
     void*                       mem_;

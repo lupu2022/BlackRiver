@@ -494,7 +494,7 @@ CUDA_CHECK(cudaStreamSynchronize(stream));
 */
 
 template<DataType DT>
-std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t workspace, tensor_t x_g, tensor_t lm_head_g) {
+std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) {
     struct _ {
         static void vocab_embedding(int vsize, int gsize, int hsize, float* lm_head, float* x, float* dst) {
             // computing vocab embedding
@@ -520,7 +520,11 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
         }
 
-        static float logits_loss(int vsize, int gsize, const int* id, float* logsoftmax, float* dout) {
+        static void vocab_grad_x(int vsize, int gsize, int hsize, float* lm_head, float* dx, float* dst) {
+
+        }
+
+        static float logits_loss(int vsize, int gsize, float loss_scale,  const int* id, float* logsoftmax, float* dout) {
             int split = gsize + 1024;
             split = split - split % 1024;
             br_assert( split * 2 * sizeof(float) < br::ComputingContext::workspace_size, " workspace size is too small!" );
@@ -531,7 +535,7 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
             CUDA_CHECK(cudaMemcpyAsync(id_, id, gsize*sizeof(int), cudaMemcpyHostToDevice, stream));
             CUDA_CHECK( cudaMemset(dout, 0, gsize * vsize * sizeof(float)) );
-            kernels::nllloss_forward(id_, logsoftmax, out_, dout, gsize, vsize, stream);
+            kernels::nllloss_forward(id_, logsoftmax, out_, dout, gsize, vsize, loss_scale, stream);
 
             float sum_loss;
             CUDA_CHECK(cudaMemcpyAsync(&sum_loss, out_, sizeof(float), cudaMemcpyDeviceToHost, stream));
@@ -539,25 +543,42 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
             return sum_loss;
         }
+
+        static int count_loss_tokens(int batch, int tokens, const int* mask) {
+            int loss_items = 0;
+            for (int b = 0;  b < batch; b++) {
+                const int* m = &mask[b * tokens];
+
+                for(int t = 0; t < tokens - 1; t++) {
+                    if ( m[t] != 0 && m[t+1] != 0) {
+                        loss_items ++;
+                    }
+                }
+            }
+
+            return loss_items;
+        }
     };
 
     if ( DT == DataType::Float ) {
+
         const int batch = self->shape().vec()[0];
         const int tokens = self->shape().vec()[1];
         const int hidden_size = self->shape().vec()[2];
 
         const int vocab_size = lm_head->shape().vec()[0];
-        const size_t wsize = workspace->items();
 
-        const int group_max_size = wsize / (vocab_size * 3);
-        br_assert(group_max_size > 0, "there is not enough sapce");
+        const int group_max_size = br::ComputingContext::workspace_size / ( vocab_size * sizeof(float) );
+        br_assert(  (int)all_logits->items() / vocab_size > 2 * group_max_size, " logits workspace is not enough !");
 
         int* mask = (int *)mask_->cpu_int()->data();
         int* ids = (int *)ids_->cpu_int()->data();
 
         double total_loss = 0.0;
-        int total_items = 0;
+        int total_items = _::count_loss_tokens(batch, tokens, mask);
+        float loss_scale = 1.0 / (float)total_items;
 
+        x_g->op_zero(x_g);
         for (int b = 0;  b < batch; b++) {
             const int* m = &mask[b * tokens];
             const int* id = &ids[b * tokens];
@@ -594,13 +615,16 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
                     if ( loss_items >  0) {
                         float* x = (float *)data() + b * tokens * hidden_size + begin_t * hidden_size;
-                        float* dst_a = (float *)workspace->cuda_float()->data();
+                        float* dx = (float *)x_g->cuda_float()->data() + b * tokens * hidden_size + begin_t * hidden_size;
+                        float* lm = (float *)lm_head->cuda_float()->data();
+
+                        float* dst_a = (float *)all_logits->cuda_float()->data();
                         float* dst_b = dst_a + id_group.size() * vocab_size;
-                        float* dst_c = dst_b + id_group.size() * vocab_size;
+                        float* local_dst = (float *)br::ComputingContext::local_workspace;
 
                         // do vocab embedding
                         _::vocab_embedding(vocab_size, id_group.size(), hidden_size,
-                                           (float *)lm_head->cuda_float()->data(), x, dst_a);
+                                           lm, x, dst_a);
 
                         // do log softmax
                         {
@@ -610,19 +634,30 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                             auto ydesc = create_cudnn_td_with({ id_group.size(), (size_t)vocab_size, 1, 1});
                             CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
                                             CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
-                                            &alpha, xdesc, dst_a, &beta, ydesc, dst_b) );
+                                            &alpha, xdesc, dst_a, &beta, ydesc, dst_a) );
                         }
 
                         // computing final loss
-                        float loss = _::logits_loss(vocab_size, id_group.size(), id_group.data(), dst_b, dst_c);
-
+                        float loss = _::logits_loss(vocab_size, id_group.size(), loss_scale, id_group.data(), dst_a, dst_b);
                         total_loss += loss;
-                        total_items += loss_items;
 
-                        // backward
+                        // log softmax backward
+                        {
+                            float alpha = 1.0;
+                            float beta = 0.0;
+                            auto ydesc = create_cudnn_td_with({ id_group.size(), (size_t)vocab_size, 1, 1});
+                            auto dxdesc = create_cudnn_td_with({ id_group.size(), (size_t)vocab_size, 1, 1});
+                            auto dydesc = create_cudnn_td_with({ id_group.size(), (size_t)vocab_size, 1, 1});
 
+                            CUDNN_CHECK( cudnnSoftmaxBackward( ComputingContext::cudnn_handle,
+                                            CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
+                                            &alpha, ydesc, dst_a, dydesc, dst_b, &beta, dxdesc, dst_b) );
+                        }
+
+                        // computing x_grad
+                        _::vocab_grad_x(vocab_size, id_group.size(), hidden_size,
+                                        lm, dx, dst_a);
                     }
-
                     id_group.clear();
                 }
             }
