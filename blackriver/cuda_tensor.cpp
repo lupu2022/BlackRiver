@@ -552,7 +552,7 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
             int k = gsize;
 
             float alpha = 1.0;
-            float beta = 0.0;
+            float beta = 1.0;
 
             float* A = x;
             float* B = dout;

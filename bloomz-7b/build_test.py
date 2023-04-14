@@ -47,7 +47,7 @@ x = x.detach_();
 
 fct = torch.nn.CrossEntropyLoss();
 lm_head = model.lm_head;
-
+lm_head.training = True;
 x.requires_grad = True;
 x1 = lm_head(x);
 x1 = x1[..., :-1, :].contiguous();
