@@ -1,3 +1,4 @@
+#include <openblas/cblas.h>
 #include <time.h>
 
 #include "common.hpp"

@@ -361,6 +361,7 @@
     op.sync
 
     "xa" @ io.dump
+    "lm_head.weight_g_" @ io.dump
 %end
 
 %def train_1

@@ -135,6 +135,7 @@ struct BloomAttentions {
             env_->execute("create_main_weight");
             env_->execute("create_main_grad");
             env_->execute("load_main_weight");
+            env_->execute("zero_main_grad");
 
         } else if ( br::CollectiveContext::mpi_rank == 2) {
             env_->execute(" 'cuda' $DEVICE ! create_layer_weight create_layer_grad ");
@@ -147,10 +148,10 @@ struct BloomAttentions {
             env_->run( init_wd );
             env_->execute("create_layer_weight");
             env_->execute("create_layer_grad");
-
             std::stringstream ss;
             ss << "'" << layers_[i-1] << "' load_layer_weight";
             env_->execute( ss.str() );
+            env_->execute("zero_layer_grad");
         }
         delete init_wd;
 

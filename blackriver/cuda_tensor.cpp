@@ -552,18 +552,17 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
             int k = gsize;
 
             float alpha = 1.0;
-            float beta = 1.0;
+            float beta = 0.0;
 
             float* A = x;
             float* B = dout;
             float* C = lm_head_w;
 
-
             cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
                         m, n, k,
                         alpha, A, m,
                         B, n, beta,
-                        C, n);
+                        C, m);
         }
 
         static float logits_loss(int vsize, int gsize, float loss_scale,  const int* id, float* logsoftmax, float* dout) {
@@ -663,8 +662,8 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                         float* dx = (float *)x_g->cuda_float()->data() + b * tokens * hidden_size + begin_t * hidden_size;
                         float* lm = (float *)lm_head->cuda_float()->data();
 
-                        float* local_dst = (float *)br::ComputingContext::local_workspace;
                         float* x_ = local_x + b * tokens * hidden_size + begin_t * hidden_size;
+                        float* local_dst = (float *)br::ComputingContext::local_workspace;
                         float* dst_a = (float *)all_logits->cuda_float()->data();
                         float* dst_b = dst_a + id_group.size() * vocab_size;
 
