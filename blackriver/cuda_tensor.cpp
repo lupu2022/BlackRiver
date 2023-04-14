@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <openblas/cblas.h>
 
 #include "common.hpp"
 #include "context.hpp"
@@ -544,6 +545,27 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
         }
 
+        static void vocab_grad_w(int vsize, int gsize, int hsize, float* lm_head_w, float* x, float* dout) {
+            // GEMM in CPU
+            int m = hsize;
+            int n = vsize;
+            int k = gsize;
+
+            float alpha = 1.0;
+            float beta = 1.0;
+
+            float* A = x;
+            float* B = dout;
+            float* C = lm_head_w;
+
+
+            cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                        m, n, k,
+                        alpha, A, m,
+                        B, n, beta,
+                        C, n);
+        }
+
         static float logits_loss(int vsize, int gsize, float loss_scale,  const int* id, float* logsoftmax, float* dout) {
             int split = gsize + 1024;
             split = split - split % 1024;
@@ -598,6 +620,9 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
         int total_items = _::count_loss_tokens(batch, tokens, mask);
         float loss_scale = 1.0 / (float)total_items;
 
+        float* local_x = new float[self->items()];
+        CUDA_CHECK(cudaMemcpyAsync(local_x, data(), self->items() * sizeof(float), cudaMemcpyDeviceToHost, br::ComputingContext::cuda_stream));
+
         x_g->op_zero(x_g);
         for (int b = 0;  b < batch; b++) {
             const int* m = &mask[b * tokens];
@@ -638,9 +663,10 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                         float* dx = (float *)x_g->cuda_float()->data() + b * tokens * hidden_size + begin_t * hidden_size;
                         float* lm = (float *)lm_head->cuda_float()->data();
 
+                        float* local_dst = (float *)br::ComputingContext::local_workspace;
+                        float* x_ = local_x + b * tokens * hidden_size + begin_t * hidden_size;
                         float* dst_a = (float *)all_logits->cuda_float()->data();
                         float* dst_b = dst_a + id_group.size() * vocab_size;
-                        float* local_dst = (float *)br::ComputingContext::local_workspace;
 
                         // do vocab embedding
                         _::vocab_embedding(vocab_size, id_group.size(), hidden_size,
@@ -674,6 +700,8 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                                             CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE,
                                             &alpha, ydesc, dst_a, dydesc, dst_b, &beta, dxdesc, dst_b) );
 
+
+                            CUDA_CHECK(cudaMemcpyAsync(local_dst, dst_b, id_group.size() * vocab_size * sizeof(float), cudaMemcpyDeviceToHost, br::ComputingContext::cuda_stream));
                         }
 
                         // computing x_grad
@@ -681,11 +709,18 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
                                         lm, dx, dst_b);
 
 
+                        // at local (CPU), computing grad for lm_head's weight
+                        CUDA_CHECK(cudaStreamSynchronize( br::ComputingContext::cuda_stream ) );
+                        _::vocab_grad_w(vocab_size, id_group.size(), hidden_size,
+                                        (float *)lm_head_g->cpu_float()->data(), x_, local_dst);
+
                     }
                     id_group.clear();
                 }
             }
         }
+
+        delete local_x;
 
         float ret = total_loss / total_items;
         std::cout << "#################  " << total_items << " "  <<  ret << std::endl;

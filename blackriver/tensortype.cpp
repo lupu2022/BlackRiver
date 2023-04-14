@@ -7,6 +7,7 @@ namespace br {
 
 ComputingReturn TensorType::op_zero(tensor_t self) {
     br_assert(self.get() == this, "can't be here!");
+    marker_ = 0;
     auto ret = impl()->op_zero(self);
     op_check(ret, "zero");
 }

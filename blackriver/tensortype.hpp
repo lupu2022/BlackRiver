@@ -133,11 +133,11 @@ struct TensorType: public TransformerComputing {
 public:
     // init functions
     TensorType() = delete;
-    TensorType(cpu_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), impl_(tensor) {};
-    TensorType(cuda_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), impl_(tensor) {};
-    TensorType(cpu_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
-    TensorType(cuda_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), impl_(tensor) {};
-    TensorType(cpu_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), impl_(tensor) {};
+    TensorType(cpu_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), marker_(0), impl_(tensor) {};
+    TensorType(cuda_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), marker_(0), impl_(tensor) {};
+    TensorType(cpu_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), marker_(0), impl_(tensor) {};
+    TensorType(cuda_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), marker_(0), impl_(tensor) {};
+    TensorType(cpu_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), marker_(0), impl_(tensor) {};
     virtual ~TensorType();
 
     // fast access
@@ -153,6 +153,10 @@ public:
     size_t impl_index() const {
         return impl_.index();
     }
+    int64_t& marker() {
+        return marker_;
+    }
+
     cpu_float_t* cpu_float() {
         if ( impl_.index() != CPU_FLOAT ) {
             br_panic("Cant get cpu_float from a tensor");
@@ -187,7 +191,7 @@ public:
     // help functions
     std::string to_string() {
         std::stringstream ss;
-        ss << device_name() << ":" <<  DataType_name( dtype() );
+        ss << device_name() << ":" <<  DataType_name( dtype() ) << ":" << marker_ ;
         ss << ":[";
         for (size_t i = 0; i < shape_.vec().size(); i++) {
             ss << shape_.vec()[i];
@@ -273,10 +277,14 @@ public:
     ComputingReturn io_mpi_recv(tensor_t self, int source) override;
     ComputingReturn io_nccl_recv(tensor_t self, int source) override;
     ComputingReturn io_nccl_send(tensor_t self, int dst) override;
+
 private:
     // basic info about tensor
     ShapeType shape_;
     const DataType  dtype_;
+
+    // help variable
+    int64_t marker_;
 
     // ImplType enum order is same as TensorImpl's variant
     enum ImplType {
