@@ -25,37 +25,10 @@ void launch_layer_norm_float(float *ln_res, float *vars, float *means, const flo
                        const float *scale, const float *bias, int batch_size,
                        int hidden_dim, float eps, cudaStream_t stream);
 
-template <typename T>
-void launch_ln_bw(T *gamma_grad, T *betta_grad, T *inp_grad, const T *out_grad,
-                  const T *residual_grad, const T *inp_or_out, const T *gamma,
-                  const T *betta, const T *vars, const T *means, int batch,
+void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad, const float *out_grad,
+                  const float *residual_grad, const float *inp_or_out, const float *gamma,
+                  const float *betta, const float *vars, const float *means, int batch,
                   int hidden_dim, cudaStream_t stream[2]);
-
-template <typename T>
-void launch_quant_ln_bw(T *gamma_grad, T *betta_grad, T *inp_grad, T *cmax_grad,
-                        const T *out_grad, const T *residual_grad,
-                        const T *inp_or_out, const T *gamma, const T *betta,
-                        const T *vars, const T *means, const uint8_t *cmask,
-                        int batch, int hidden_dim, cudaStream_t stream[2]);
-
-template <typename T>
-void launch_attn_softmax(T *vals, const T *attn_mask, int batch_size, int heads,
-                         int from_len, int to_len, bool mask_future,
-                         cudaStream_t stream);
-
-template <typename T>
-void launch_attn_softmax_bw(T *out_grad, const T *soft_inp, int rows,
-                            int softmax_len, cudaStream_t stream);
-
-template <typename T>
-void launch_attn_softmax_new(T *out, T *inp, const T *attn_mask, int batch_size,
-                             int heads, int from_len, int to_len,
-                             bool mask_future, cudaStream_t stream);
-
-template <typename T>
-void launch_attn_softmax_bw_new(T *inp_grad, const T *out_grad,
-                                const T *soft_inp, int rows, int softmax_len,
-                                cudaStream_t stream);
 
 //[sz0, sz1, sz2, sz3] -> [sz0, sz2, sz1, sz3]
 template <typename T>

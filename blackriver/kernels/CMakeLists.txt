@@ -27,7 +27,6 @@ add_library(kernels STATIC LtSgemm.cu
                            gelu.cu
                            nll_loss.cu
                            normalize_kernels.cu
-                           transform_kernels.cu
-                           softmax_kernels.cu )
+                           transform_kernels.cu )
 
 target_include_directories(kernels PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
