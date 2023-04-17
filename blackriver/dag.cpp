@@ -162,7 +162,7 @@ UserWord Enviroment::compile(const std::string& txt) {
         }
 
         static bool is_valid_name(std::string const &str) {
-            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "!" || str == "!!" || str == "#") {
+            if ( str == "true" || str == "false" || str == "null" || str == "@" || str == "!" || str == "!!" || str == "#" || str == "##" ) {
                 return false;
             }
             if (str.find_first_not_of("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") == std::string::npos) {
@@ -268,7 +268,8 @@ UserWord Enviroment::compile(const std::string& txt) {
         } else if ( token == "@" ||
                     token == "!"  ||
                     token == "!!" ||
-                    token == "#") {
+                    token == "#"  ||
+                    token == "##" ) {
             newCode = WordCode::new_builtin( token );
         } else if ( token[0] == '"' || token[0] == '\'' || token[0] == '$' ) {
             if ( token[0] == '"' || token[0] == '\'' ) {
@@ -356,6 +357,15 @@ namespace builtin {
         }
     };
 
+    struct BuiltinCurrentHash : public BuiltinOperator {
+        BuiltinCurrentHash() {
+        }
+        void run(Enviroment* env) override {
+            auto& stack = env->stack();
+            auto current = env->hashes_current();
+            stack.push_number( current );
+        }
+    };
 }
 
 
@@ -386,6 +396,8 @@ void Enviroment::linking(DaG& dag, UserWord& word) {
                         op = new builtin::BuiltinDrop();
                     } else if ( code.str_ == "#" ) {
                         op = new builtin::BuiltinChangeHash();
+                    } else if ( code.str_ == "##" ) {
+                        op = new builtin::BuiltinCurrentHash();
                     } else {
                         br_panic("Find an unsupoorted builtin operator!");
                     }

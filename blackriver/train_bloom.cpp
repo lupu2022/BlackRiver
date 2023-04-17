@@ -11,7 +11,7 @@
 #include "cpu_tensor.hpp"
 #include "cuda_tensor.hpp"
 
-const size_t MEM_CTX_SIZE = 24l * 1024 * 1024 * 1024;
+const size_t MEM_CTX_SIZE = 25l * 1024 * 1024 * 1024;
 const int VOCAB_SIZE = 250880;
 const int HIDDEN_SIZE = 4096;
 const int HEADS_NUM = 32;
@@ -146,6 +146,7 @@ struct BloomAttentions {
             env_->change(i);
             env_->hash().set("$DEVICE", "cpu");
             env_->run( init_wd );
+            env_->execute("create_layer_input");
             env_->execute("create_layer_weight");
             env_->execute("create_layer_grad");
             std::stringstream ss;

@@ -16,6 +16,12 @@
 "HIDDEN_SIZE" @ 5 *     "HIDDEN_SIZE_x5"        !
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
+512 8 *  "MAX_TOKENS" !
+
+%def create_layer_input
+    "MAX_TOKENS" @ "HIDDEN_SIZE" @ 2 $DEVICE @ "float" op.create "_xinput_" !
+%end
+
 %def create_layer_weight
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.weight"  !
     ("HIDDEN_SIZE" @  1 $DEVICE @) "float"  op.create      "input_layernorm.bias"    !
@@ -274,12 +280,15 @@
   
     0 #        "post_attention_layernorm.weight" @
     swap #     "post_attention_layernorm.weight" @  op.copy
+    dup
 
     0 #        "post_attention_layernorm.bias" @
     swap #     "post_attention_layernorm.bias" @    op.copy
 
-    ;op.sync
-    
+    ;; clone a _xinput_ in main hash 
+
+    ( # "_xinput_" @ 0 # )  0 $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput_" !
+
     ">>>End sync with GPU..." echo
 %end
 
