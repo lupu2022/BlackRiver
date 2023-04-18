@@ -343,9 +343,9 @@
 
         "xa" @ 1 io.nccl.recv 
         
-        "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xinput" @ "LN_EPS" @ op.layernorm
+        "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xd" @ "LN_EPS" @ op.layernorm
         
-        "xinput" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
+        "xd" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
     }
     op.sync
 

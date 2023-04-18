@@ -128,6 +128,11 @@ std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self,
     return result;
 }
 
+ComputingReturn TensorType::op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din, float eps) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_layernorm_backward(self, scale, bias, y, dscale, dbias, din, eps);
+    op_check(ret, "layernorm_backward");
+}
 
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");
