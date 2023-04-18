@@ -8,13 +8,12 @@
 
 #define TILE_DIM 32
 
-const float LN_EPSILON = 0.0001;
 namespace cg = cooperative_groups;
 namespace kernels {
 
 template <typename T>
-__forceinline__ __device__ T add_eps(T x) {
-  return fabsf(x) > LN_EPSILON ? x : (x < 0 ? -LN_EPSILON : LN_EPSILON);
+__forceinline__ __device__ T add_eps(T x, float eps) {
+  return fabsf(x) > eps ? x : (x < 0 ? -eps : eps);
 }
 
 
@@ -137,7 +136,7 @@ __global__ void ker_ln_bw_dinp(T *inp_grad, const T *out_grad,
                                const T *residual_grad, const T *inp_or_out,
                                const T *gamma, const T *betta, const T *vars,
                                const T *means, const uint8_t *cmask,
-                               int hidden_dim) {
+                               int hidden_dim, float eps) {
   int offset = blockIdx.x * hidden_dim + threadIdx.x;
   float4 dxhat, xhat;
   float var_rsqrt;
@@ -164,14 +163,14 @@ __global__ void ker_ln_bw_dinp(T *inp_grad, const T *out_grad,
     (input - mean) * rsqrtf(var)
     */
     xhat = ((const float4 *)inp_or_out)[offset];
-    var_rsqrt = rsqrtf((float)vars[blockIdx.x] + LN_EPSILON);
+    var_rsqrt = rsqrtf((float)vars[blockIdx.x] + eps);
     if (means == nullptr) {
       // inp_or_out is output, xhat = (output - betta) / gamma
       float4 vbetta = ((const float4 *)betta)[threadIdx.x];
-      xhat.x = (xhat.x - vbetta.x) / add_eps(vgamma.x);
-      xhat.y = (xhat.y - vbetta.y) / add_eps(vgamma.y);
-      xhat.z = (xhat.z - vbetta.z) / add_eps(vgamma.z);
-      xhat.w = (xhat.w - vbetta.w) / add_eps(vgamma.w);
+      xhat.x = (xhat.x - vbetta.x) / add_eps(vgamma.x, eps);
+      xhat.y = (xhat.y - vbetta.y) / add_eps(vgamma.y, eps);
+      xhat.z = (xhat.z - vbetta.z) / add_eps(vgamma.z, eps);
+      xhat.w = (xhat.w - vbetta.w) / add_eps(vgamma.w, eps);
     } else {
       // inp_or_out is input, xhat = (input - mean) * rsqrtf(var)
       float fmean = (float)means[blockIdx.x];
@@ -257,7 +256,7 @@ __global__ void ker_ln_bw_dgamma_dbetta(T *gamma_grad, T *betta_grad,
                                         const T *inp_or_out, const T *gamma,
                                         const T *betta, const T *vars,
                                         const T *means, const uint8_t *cmask,
-                                        int rows, int width) {
+                                        int rows, int width, float eps) {
   __shared__ float betta_buffer[TILE_DIM][TILE_DIM];
   __shared__ float gamma_buffer[TILE_DIM][TILE_DIM];
 
@@ -287,7 +286,7 @@ __global__ void ker_ln_bw_dgamma_dbetta(T *gamma_grad, T *betta_grad,
         // inp_or_out is output
         val = (float)inp_or_out[offset];
         dbetta += dout;
-        dgamma += ((val - vbetta) / add_eps(vgamma) * dout);
+        dgamma += ((val - vbetta) / add_eps(vgamma, eps) * dout);
         offset += y_stride;
       }
     } else {
@@ -301,7 +300,7 @@ __global__ void ker_ln_bw_dgamma_dbetta(T *gamma_grad, T *betta_grad,
         val = (float)inp_or_out[offset];
         dbetta += dout;
         dgamma += ((val - (float)means[r]) *
-                   rsqrtf((float)vars[r] + LN_EPSILON) * dout);
+                   rsqrtf((float)vars[r] + eps) * dout);
         offset += y_stride;
       }
     }
@@ -363,14 +362,14 @@ void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad,
                   const float *out_grad, const float *residual_grad,
                   const float *inp_or_out, const float *gamma,
                   const float *betta, const float *vars,
-                  const float *means, int batch, int hidden_dim,
+                  const float *means, int batch, int hidden_dim, float eps,
                   cudaStream_t stream[2]) {
   // compute grad of gamma and betta
   dim3 grid_dim(((hidden_dim + TILE_DIM - 1) / TILE_DIM) * TILE_DIM);
   dim3 block_dim(TILE_DIM, TILE_DIM);
   ker_ln_bw_dgamma_dbetta<float><<<grid_dim, block_dim, 0, stream[0]>>>(
       gamma_grad, betta_grad, nullptr, out_grad, inp_or_out, gamma, betta, vars,
-      means, nullptr, batch, hidden_dim);
+      means, nullptr, batch, hidden_dim, eps);
 
   // compute grad of input
   if (hidden_dim % 4 != 0 || hidden_dim > 4096) {
@@ -380,7 +379,7 @@ void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad,
   int nthread = min(((hidden_dim + 31) / 32) * 32, MAX_THREADS);
   ker_ln_bw_dinp<<<batch, nthread, 0, stream[1]>>>(
       inp_grad, out_grad, residual_grad, inp_or_out, gamma, betta, vars, means,
-      nullptr, hidden_dim);
+      nullptr, hidden_dim, eps);
 }
 
 

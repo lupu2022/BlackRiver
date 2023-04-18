@@ -28,7 +28,7 @@ void launch_layer_norm_float(float *ln_res, float *vars, float *means, const flo
 void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad, const float *out_grad,
                   const float *residual_grad, const float *inp_or_out, const float *gamma,
                   const float *betta, const float *vars, const float *means, int batch,
-                  int hidden_dim, cudaStream_t stream[2]);
+                  int hidden_dim, float eps, cudaStream_t stream[2]);
 
 //[sz0, sz1, sz2, sz3] -> [sz0, sz2, sz1, sz3]
 template <typename T>
