@@ -370,7 +370,7 @@ void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad,
   ker_ln_bw_dgamma_dbetta<float><<<grid_dim, block_dim, 0, stream[0]>>>(
       gamma_grad, betta_grad, nullptr, out_grad, inp_or_out, gamma, betta, vars,
       means, nullptr, batch, hidden_dim, eps);
-#if 0
+  
   // compute grad of input
   if (hidden_dim % 4 != 0 || hidden_dim > 4096) {
     throw std::runtime_error("hidden_dim % 4 != 0 || hidden_dim > 4096");
@@ -380,7 +380,6 @@ void launch_ln_bw_float(float *gamma_grad, float *betta_grad, float *inp_grad,
   ker_ln_bw_dinp<<<batch, nthread, 0, stream[1]>>>(
       inp_grad, out_grad, residual_grad, inp_or_out, gamma, betta, vars, means,
       nullptr, hidden_dim, eps);
-#endif
 }
 
 

@@ -739,13 +739,14 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_, float eps) {
+ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t var_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_, float eps) {
     if ( DT == DataType::Float ) {
         cudaStream_t streams[] = {br::ComputingContext::cuda_stream, br::ComputingContext::cuda_stream};
 
         float* dout = (float *)self->cuda_float()->data();
         float* scale = (float *)scale_->cuda_float()->data();
         float* bias = (float *)bias_->cuda_float()->data();
+        float* var = (float *)var_->cuda_float()->data();
         float* y = (float *)y_->cuda_float()->data();
         float* dscale = (float *)dscale_->cuda_float()->data();
         float* dbias = (float *)dbias_->cuda_float()->data();
@@ -756,11 +757,9 @@ ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t sc
         int hidden = self->shape().vec()[2];
         int num = batch * tokens;
 
-        std::cout << " >>>>>>>>>>>>>> " << num << " " << hidden << std::endl;
-
         kernels::launch_ln_bw_float(dscale, dbias, din, dout,
                                     nullptr, y, scale, bias,
-                                    nullptr, nullptr,
+                                    var, nullptr,
                                     num, hidden, eps, streams);
 
 

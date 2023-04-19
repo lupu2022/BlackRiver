@@ -196,10 +196,11 @@ namespace nn {
             tensor_t dbias = stack.pop_tensor();
             tensor_t dscale = stack.pop_tensor();
             tensor_t y = stack.pop_tensor();
+            tensor_t var = stack.pop_tensor();
             tensor_t bias = stack.pop_tensor();
             tensor_t scale = stack.pop_tensor();
             tensor_t self = stack.pop_tensor();
-            self->op_layernorm_backward(self, scale, bias, y, dscale, dbias, din, eps);
+            self->op_layernorm_backward(self, scale, bias, var, y, dscale, dbias, din, eps);
         }
         NWORD_CREATOR_DEFINE_LR(LayernormBackward)
     };
