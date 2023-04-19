@@ -181,6 +181,16 @@
 
 %end
 
+%def one_layer
+    sync_layer 0 #
+    dup
+
+    "xinput" @ swap io.nccl.recv 
+    layer_forward
+    "xa" @ swap io.nccl.send
+    "xinput_" @ "xinput" @ op.copy
+%end
+
 %def train_0
     ;; receiving alibi and mask
     {
@@ -209,133 +219,22 @@
         "xa" @ 1 io.nccl.send
         "xinput_" @ "xinput" @ op.copy
     }
-   
-    {
-        2 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        3 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
     
-    {
-        4 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        5 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
+    1 2 one_layer
+    1 3 one_layer
+    1 4 one_layer
+    1 5 one_layer
+    1 6 one_layer
+    1 7 one_layer
+    1 8 one_layer
+    1 9 one_layer
+    1 10 one_layer
+    1 11 one_layer
+    1 12 one_layer
+    1 13 one_layer
+    1 14 one_layer
+    1 15 one_layer
     
-    {
-        6 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        7 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        8 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        9 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    {
-        10 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        11 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    {
-        12 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        13 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        14 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    {
-        15 sync_layer 0 #
-
-        "xinput" @ 1 io.nccl.recv 
-        layer_forward
-        "xa" @ 1 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
- 
     ;; output layer 
     {
         0 #
@@ -352,10 +251,10 @@
     }
     op.sync
 
-    "xa" @ io.dump
-    
     "ln_f.weight_g" @ io.dump
-    
+   
+    "ln_f.bias_g" @ io.dump
+
     "xb" @ io.dump
 
 %end
@@ -377,141 +276,22 @@
         "xmask" @ "xmask_" @ op.copy
     }
     
-    { 
-        1 sync_layer 0 # 
+    0 1 one_layer
+    0 2 one_layer
+    0 3 one_layer
+    0 4 one_layer
+    0 5 one_layer
+    0 6 one_layer
+    0 7 one_layer
+    0 8 one_layer
+    0 9 one_layer
+    0 10 one_layer
+    0 11 one_layer
+    0 12 one_layer
+    0 13 one_layer
+    0 14 one_layer
+    0 15 one_layer
 
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    { 
-        2 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    { 
-        3 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-
-    { 
-        4 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    { 
-        5 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    { 
-        6 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    { 
-        7 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    { 
-        8 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    { 
-        9 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    { 
-        10 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    { 
-        11 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        12 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    {
-        13 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-
-    {
-        14 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
-    
-    {
-        15 sync_layer 0 # 
-        
-        "xinput" @ 0 io.nccl.recv
-        layer_forward
-        "xa" @ 0 io.nccl.send
-        "xinput_" @ "xinput" @ op.copy
-    }
 
     op.sync
 %end

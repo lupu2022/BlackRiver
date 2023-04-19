@@ -26,45 +26,6 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from torch.nn import functional as F
 
-def save_bloomz_7b1_mt():
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
-    checkpoint = "bigscience/bloomz-7b1-mt"
-    model = AutoModelForCausalLM.from_pretrained(checkpoint)
-
-    path = "bloomz-7b1-mt/pth/"
-
-    torch.save(model.transformer.word_embeddings.state_dict(), path + "word_embeddings.pth");
-    torch.save(model.transformer.word_embeddings_layernorm.state_dict(), path + "word_embeddings_layernorm.pth");
-    torch.save(model.transformer.ln_f.state_dict(), path + "ln_f.pth");
-    torch.save(model.lm_head.state_dict(), path + "lm_head.pth");
-
-    for i in range(30):
-        hname = "h_" + str(i) + ".pth";
-        print("saving.. " + str(i)  + " attention");
-        torch.save(model.transformer.h[i].state_dict(), path + hname);
-
-def load_bloomz_7b1_mt():
-    print("Creating a empty model...")
-    config = LLMConfig();
-    model = BloomForCausalLM(config);
-    model.eval();
-
-    print("Loading embeddings...")
-    config = LLMConfig();
-    path = "bloomz-7b1-mt/pth/"
-    model.transformer.word_embeddings.load_state_dict( torch.load( path + "word_embeddings.pth") );
-    model.transformer.word_embeddings_layernorm.load_state_dict( torch.load( path + "word_embeddings_layernorm.pth") );
-    model.transformer.ln_f.load_state_dict( torch.load( path + "ln_f.pth") );
-    model.lm_head.load_state_dict( torch.load( path + "lm_head.pth") );
-
-    for i in range(30):
-        hname = "h_" + str(i) + ".pth";
-        print("load.. " + str(i)  + " attention");
-        model.transformer.h[i].load_state_dict( torch.load(path + hname) );
-
-    return config, model
-
 @dataclass
 class LLMConfig:
     vocab_size: int = 250880
@@ -727,7 +688,7 @@ class BloomModel(nn.Module):
                 all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
 
         # Add last hidden state
-        hidden_states = self.ln_f(hidden_states)
+        # hidden_states = self.ln_f(hidden_states)
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
@@ -823,6 +784,7 @@ class BloomForCausalLM(nn.Module):
             output_hidden_states=output_hidden_states,
         )
         hidden_states = transformer_outputs[0]
+        hidden_states = self.transformer.ln_f(hidden_states);
 
         lm_logits = self.lm_head(hidden_states)
 
@@ -865,3 +827,103 @@ class BloomForCausalLM(nn.Module):
             for layer_past in standardized_past
         )
         return self._convert_to_bloom_cache(reordered_past)
+
+
+def save_bloomz_7b1_mt():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    checkpoint = "bigscience/bloomz-7b1-mt"
+    model = AutoModelForCausalLM.from_pretrained(checkpoint)
+
+    path = "bloomz-7b1-mt/pth/"
+
+    torch.save(model.transformer.word_embeddings.state_dict(), path + "word_embeddings.pth");
+    torch.save(model.transformer.word_embeddings_layernorm.state_dict(), path + "word_embeddings_layernorm.pth");
+    torch.save(model.transformer.ln_f.state_dict(), path + "ln_f.pth");
+    torch.save(model.lm_head.state_dict(), path + "lm_head.pth");
+
+    for i in range(30):
+        hname = "h_" + str(i) + ".pth";
+        print("saving.. " + str(i)  + " attention");
+        torch.save(model.transformer.h[i].state_dict(), path + hname);
+
+def load_bloomz_7b1_mt():
+    print("Creating a empty model...")
+    config = LLMConfig();
+    model = BloomForCausalLM(config);
+    model.eval();
+
+    print("Loading embeddings...")
+    config = LLMConfig();
+    path = "pth/"
+    model.transformer.word_embeddings.load_state_dict( torch.load( path + "word_embeddings.pth") );
+    model.transformer.word_embeddings_layernorm.load_state_dict( torch.load( path + "word_embeddings_layernorm.pth") );
+    model.transformer.ln_f.load_state_dict( torch.load( path + "ln_f.pth") );
+    model.lm_head.load_state_dict( torch.load( path + "lm_head.pth") );
+
+    for i in range(30):
+        hname = "h_" + str(i) + ".pth";
+        print("load.. " + str(i)  + " attention");
+        model.transformer.h[i].load_state_dict( torch.load(path + hname) );
+
+    return config, model
+
+checkpoint = "bigscience/bloomz-7b1-mt"
+text = [
+'''
+All three calls return the length of the message on successful completion.
+If a message is too long to fit in the supplied buffer, excess bytes may be discarded depending  on  the  type  of socket the message is received from.
+'''
+,
+'''
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+'''
+];
+
+def test_model():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    tks = tokenizer( text, truncation=True, padding="max_length", max_length=512, return_tensors="pt")
+
+    '''
+    torch.save(tks, "xinput.pth");
+    vlist = tks["input_ids"].numpy().flatten().tolist()
+    d = msgpack.packb(vlist, use_bin_type=True);
+    with open( "xinput.ids.msg", "wb") as outfile:
+        outfile.write(d)
+
+    vlist = tks["attention_mask"].numpy().flatten().tolist()
+    d = msgpack.packb(vlist, use_bin_type=True);
+    with open( "xinput.mask.msg", "wb") as outfile:
+        outfile.write(d)
+    '''
+
+    _, model = load_bloomz_7b1_mt();
+
+    labels = tks["input_ids"];
+    mask = tks["attention_mask"];
+    labels = torch.masked_fill(labels, mask == 0, -100);
+    x = model(**tks, output_attentions = False, output_hidden_states = True, labels = labels );
+
+    x = x[3][30]
+    x = x.detach_();
+    x.requires_grad = True;
+
+    ln_f = model.transformer.ln_f;
+    ln_f.training = True;
+    lm_head = model.lm_head;
+    lm_head.training = True;
+    fct = torch.nn.CrossEntropyLoss();
+
+    x1 = ln_f(x);
+    x1 = lm_head(x1);
+    x1 = x1[..., :-1, :].contiguous();
+    x1 = x1.view(-1, 250880);
+    labels = labels[..., 1:].contiguous();
+    labels = labels.view(-1);
+    loss = fct(x1, labels);
+    loss.backward();
+    dx = x.grad;
+
+    return dx, ln_f
