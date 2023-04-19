@@ -22,6 +22,11 @@
         "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
 
         $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
+        
+        dup
+        "_var_" @ swap  $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "yout_g" !
+    
+        $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
     }
    
     ;; alibi in GPU, alibi_ in CPU
@@ -42,7 +47,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
 
-    ;; xa, xb, xc, xd, xe
+    ;; xa, xb, xc, xd
     {
         dup  
 
@@ -69,43 +74,23 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-        
-        dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xe" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ye" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "ze" !
-    }
-    
-    ;; x3a x3b
-    {
-        dup
-
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3a" !
-        dup $batch @ $tokens @ "HIDDEN_SIZE_x3" @  * * +
-
-
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x3" @ 3 op.view "x3b" !
     }
    
-    ;; x4a x4b x5a
+    ;; following memory is shadered 
+    
+    ;; x4 
     {
         dup
 
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
-        dup $batch @ $tokens @ "HIDDEN_SIZE_x4" @  * * +
- 
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
-
-        dup 
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x5" @ 3 op.view "x5a" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4" !
     }
  
-
     ;; output logits 
     {
         dup
 
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
        
         dup
         "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
@@ -117,20 +102,20 @@
 
     ;; larget memroy
     {
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
 %end
 
 %def layer_forward
     ;; layernorm for input
-    "xinput" @ "xb" @ "xc" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xe" @  "LN_EPS" @  op.layernorm 
+    "xinput" @ "xa" @ "xb" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
     
     ;; get kqv
     {
-        "xe" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
-        "xe" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
-        "xe" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
+        "xd" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
+        "xd" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
+        "xd" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
     }
 
     ;; transponse
@@ -169,15 +154,20 @@
     {
 
         ;; 4h dense & glue
-        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4b" @ op.linear
-        "x4b" @ "x4b" @ op.gelu
+        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
+        "x4" @ "x4" @ op.gelu
 
         ;; 4h dense
-        "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
+        "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
 
         ;; residual 
         "xa" @ "xb" @ "xa" @ op.add
     }
+%end
+
+
+%def layer_backward
+    
 
 %end
 
