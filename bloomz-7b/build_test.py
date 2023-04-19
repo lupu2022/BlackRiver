@@ -5,7 +5,6 @@ checkpoint = "bigscience/bloomz-7b1-mt"
 
 model = AutoModelForCausalLM.from_pretrained(checkpoint)
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-
 model.eval();
 
 text = [
@@ -36,7 +35,6 @@ with open( "xinput.mask.msg", "wb") as outfile:
 '''
 
 labels = tks["input_ids"];
-
 mask = tks["attention_mask"];
 
 labels = torch.masked_fill(labels, mask == 0, -100);
@@ -44,28 +42,18 @@ x = model(**tks, output_attentions = False, output_hidden_states = True, labels 
 
 x = x[3][30]
 x = x.detach_();
+x.requires_grad = True;
 
-fct = torch.nn.CrossEntropyLoss();
 lm_head = model.lm_head;
 lm_head.training = True;
-x.requires_grad = True;
+fct = torch.nn.CrossEntropyLoss();
+
 x1 = lm_head(x);
 x1 = x1[..., :-1, :].contiguous();
 x1 = x1.view(-1, 250880);
 labels = labels[..., 1:].contiguous();
 labels = labels.view(-1);
-
 loss = fct(x1, labels);
-
 loss.backward();
-
 dx = x.grad;
-
-x1 = x1.detach();
-x1.requires_grad = True;
-
-loss = fct(x1, labels);
-loss.backward()
-
-dx1 = x1.grad
 

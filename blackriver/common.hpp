@@ -87,8 +87,16 @@ inline void read_data(const char* fileName, std::vector<T>& dout) {
     size_t length = inf.tellg();
     inf.seekg(0, inf.beg);
 
-    dout.resize( length / sizeof(T) );
-    inf.read((char *)dout.data(), length);
+    const size_t count = 1024;
+    const size_t items = length / sizeof(T);
+    br_assert( items % count == 0, "Only support block read");
+    dout.resize( items );
+
+    for(size_t i = 0; i < items / count; i++) {
+        T* src = (T *)dout.data() + i * count;
+        inf.read((char *)src , sizeof(T) * count);
+    }
+
     inf.close();
 }
 

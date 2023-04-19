@@ -756,6 +756,8 @@ ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t sc
         int hidden = self->shape().vec()[2];
         int num = batch * tokens;
 
+        std::cout << " >>>>>>>>>>>>>> " << num << " " << hidden << std::endl;
+
         kernels::launch_ln_bw_float(dscale, dbias, din, dout,
                                     nullptr, y, scale, bias,
                                     nullptr, nullptr,

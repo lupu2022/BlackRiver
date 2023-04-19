@@ -346,11 +346,14 @@
         "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xd" @ "LN_EPS" @ op.layernorm
         
         "xd" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
+        
+        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @ "xb" @ "LN_EPS" @ op.layernorm_backward
+
     }
-    op.sync
 
     "xa" @ io.dump
-    "lm_head.weight_g_" @ io.dump
+    
+    "ln_f.bias_g" @ io.dump
 %end
 
 %def train_1
