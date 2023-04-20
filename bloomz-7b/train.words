@@ -107,10 +107,7 @@
     }
 %end
 
-%def layer_forward
-    ;; layernorm for input
-    "xinput" @ "xa" @ "xb" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
-    
+%def layer_get_kqv
     ;; get kqv
     {
         "xd" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
@@ -124,7 +121,9 @@
         "yb" @ "za" @ op.transpos_0213          ;; key -> za
         "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
     }
-    
+%end
+
+%def layer_attn
     ;; get query@key
     "zd" @  "za" @  "xll" @ op.querykey 
 
@@ -138,31 +137,41 @@
     ;; do attention and transpose back
     "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
     "zc" @ "ya" @ op.transpos_0213
-  
-    ;; do dense
-    "xa" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
+%end
+
+%def layer_mlp
+    ;; MLP
+    ;; xa atteion output
+    ;; xb passed post layernorm
+
+    ;; 4h dense & glue
+    "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
+    "x4" @ "x4" @ op.gelu
+
+    ;; 4h dense
+    "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
+
+    ;; residual 
+    "xa" @ "xb" @ "xa" @ op.add
+
+%end
+
+%def layer_forward
+    ;; layernorm for input
+    "xinput" @ "xa" @ "xb" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
    
-    ;; added residual 
+    layer_get_kqv
+    
+    layer_attn
+
+    ;; do dense & residual
+    "xa" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
     "xb" @ "xinput" @ "xa" @ op.add
 
     ;; post layernorm
     "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
-    
-    ;; MLP
-    ;; xa atteion output
-    ;; xb passed post layernorm
-    {
 
-        ;; 4h dense & glue
-        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
-        "x4" @ "x4" @ op.gelu
-
-        ;; 4h dense
-        "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
-
-        ;; residual 
-        "xa" @ "xb" @ "xa" @ op.add
-    }
+    layer_mlp
 %end
 
 
