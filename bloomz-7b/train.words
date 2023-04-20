@@ -1,10 +1,10 @@
 %def create_var
     1 "cuda" "float"  op.create  "_var_"     !
    
-    16 2048 *             1 "cpu"  "int"  op.create  "_ids_"     !
-    16 2048 *             1 "cpu"  "int"  op.create  "_mask_"    !
+    4 2048 *              1 "cpu"  "int"  op.create  "_ids_"     !
+    4 2048 *              1 "cpu"  "int"  op.create  "_mask_"    !
     "HEADS_NUM" @ 2048 *  1 "cpu"  "float"  op.create  "_alibi_"   !
-    16 2048 2048 * *      1 "cpu"  "float"  op.create  "_xmask_"   !   
+    4 2048 2048 * *       1 "cpu"  "float"  op.create  "_xmask_"   !   
 %end
 
 %def create_dynamic
@@ -22,13 +22,13 @@
         "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
 
         $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
-        
         dup
+        
         "_var_" @ swap  $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "yout_g" !
     
-        $batch @ $tokens @ "HIDDEN_SIZE" @ * * 
+        $batch @ $tokens @ "HIDDEN_SIZE" @ * * + 
     }
-   
+  
     ;; alibi in GPU, alibi_ in CPU
     {
         dup
@@ -46,11 +46,9 @@
     
         $batch @ $tokens @ $tokens @ * * +
     }
-
+    
     ;; xa, xb, xc, xd
     {
-        dup  
-
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ya" !
@@ -75,7 +73,8 @@
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
     }
-   
+  
+
     ;; following memory is shadered 
     
     ;; x4 
@@ -85,7 +84,8 @@
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4" !
     }
- 
+    
+
     ;; output logits 
     {
         dup
@@ -99,60 +99,17 @@
     
         "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "all_logits" !
     }
-
+    
     ;; larget memroy
     {
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
-%end
-
-%def layer_get_kqv
-    ;; get kqv
+   
+    ;; active tensor for backward
     {
-        "xd" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
-        "xd" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
-        "xd" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
+         
     }
-
-    ;; transponse
-    {
-        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
-        "yb" @ "za" @ op.transpos_0213          ;; key -> za
-        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
-    }
-%end
-
-%def layer_attn
-    ;; get query@key
-    "zd" @  "za" @  "xll" @ op.querykey 
-
-    ;; added alibi and apply xmask
-    "xll" @ "alibi" @ "xll" @ op.add
-    "xll" @ "xmask" @ "xll" @ op.add
-
-    ;; do softmax
-    "xll" @ "xll" @ op.softmax
-
-    ;; do attention and transpose back
-    "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
-    "zc" @ "ya" @ op.transpos_0213
-%end
-
-%def layer_mlp
-    ;; MLP
-    ;; xa atteion output
-    ;; xb passed post layernorm
-
-    ;; 4h dense & glue
-    "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
-    "x4" @ "x4" @ op.gelu
-
-    ;; 4h dense
-    "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
-
-    ;; residual 
-    "xa" @ "xb" @ "xa" @ op.add
 
 %end
 
@@ -160,9 +117,33 @@
     ;; layernorm for input
     "xinput" @ "xa" @ "xb" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
    
-    layer_get_kqv
-    
-    layer_attn
+    ;; get kqv & transpose
+    {
+        "xd" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
+        "xd" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
+        "xd" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
+
+        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
+        "yb" @ "za" @ op.transpos_0213          ;; key -> za
+        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
+    }
+
+    ;; attention
+    {
+        ;; get query@key
+        "zd" @  "za" @  "xll" @ op.querykey 
+
+        ;; added alibi and apply xmask
+        "xll" @ "alibi" @ "xll" @ op.add
+        "xll" @ "xmask" @ "xll" @ op.add
+
+        ;; do softmax
+        "xll" @ "xll" @ op.softmax
+
+        ;; do attention and transpose back
+        "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
+        "zc" @ "ya" @ op.transpos_0213
+    }
 
     ;; do dense & residual
     "xa" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
@@ -171,12 +152,26 @@
     ;; post layernorm
     "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
 
-    layer_mlp
+    ;; MLP
+    {
+        ;; xa atteion output
+        ;; xb passed post layernorm
+        ;; 4h dense & glue
+        
+        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
+        "x4" @ "x4" @ op.gelu
+
+        ;; 4h dense
+        "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
+
+        ;; residual 
+        "xa" @ "xb" @ "xa" @ op.add
+    }
+
 %end
 
 
 %def layer_backward
-    
 
 %end
 
@@ -245,8 +240,7 @@
         
         "xd" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
         
-        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xc" @ "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "xb" @ "LN_EPS" @ op.layernorm_backward
-
+        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xc" @ "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "yout_g" @ "LN_EPS" @ op.layernorm_backward
     }
     op.sync
 
@@ -254,8 +248,8 @@
    
     "ln_f.bias_g" @ io.dump
 
-    "xb" @ io.dump
-
+    "yout_g" @ io.dump
+        
 %end
 
 %def train_1

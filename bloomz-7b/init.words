@@ -16,7 +16,7 @@
 "HIDDEN_SIZE" @ 5 *     "HIDDEN_SIZE_x5"        !
 "HIDDEN_SIZE" @ dup *   "HIDDEN_SQUARE"         ! 
 
-512 8 *  "MAX_TOKENS" !
+2048 4 *  "MAX_TOKENS" !
 
 %def create_layer_input
     "MAX_TOKENS" @ "HIDDEN_SIZE" @ 2 $DEVICE @ "float" op.create "_xinput_" !

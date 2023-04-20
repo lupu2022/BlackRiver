@@ -724,15 +724,6 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
         float ret = total_loss / total_items;
         std::cout << "#################  " << total_items << " "  <<  ret << std::endl;
 
-        /*
-        cudaStream_t streams[] = {br::ComputingContext::cuda_stream, br::ComputingContext::cuda_stream};
-        kernels::launch_ln_bw_float(nullptr, nullptr, nullptr, nullptr,
-                                    nullptr, nullptr,
-                                    nullptr, nullptr, nullptr, 0,
-                                    0, streams);
-        */
-
-
         return ret;
     }
     return OP_TODO_ERROR;

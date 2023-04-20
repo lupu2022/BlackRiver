@@ -11,7 +11,7 @@
 #include "cpu_tensor.hpp"
 #include "cuda_tensor.hpp"
 
-const size_t MEM_CTX_SIZE = 25l * 1024 * 1024 * 1024;
+const size_t MEM_CTX_SIZE = 25.5 * 1024 * 1024 * 1024l;
 const int VOCAB_SIZE = 250880;
 const int HIDDEN_SIZE = 4096;
 const int HEADS_NUM = 32;
