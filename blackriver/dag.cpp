@@ -8,7 +8,7 @@ std::ostream& operator<<(std::ostream& os, Cell& c) {
     if ( c.type_ == Cell::T_String ) {
         os << "S:" << c.as_string();
     } else if ( c.type_ == Cell::T_Number ) {
-        os << "N:" << c.as_number();
+        os << "N:" << std::fixed << c.as_number();
     } else {
         auto t = c.as_tensor();
         os << "T: (" << t->to_string() << " )";
