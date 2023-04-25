@@ -240,15 +240,12 @@
         
         "xd" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
         
-        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xc" @ "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "yout_g" @ "LN_EPS" @ op.layernorm_backward
+        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xc" @ "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "xb" @ "LN_EPS" @ op.layernorm_backward
+    
+        "xb" @ 1 io.nccl.send
     }
     op.sync
 
-    "ln_f.weight_g" @ io.dump
-   
-    "ln_f.bias_g" @ io.dump
-
-    "yout_g" @ io.dump
         
 %end
 
@@ -285,6 +282,20 @@
     0 14 one_layer
     0 15 one_layer
 
+    {
+        15 sync_layer 0 #
+        "xinput" @ "xinput_" @ op.copy
+        "yout_g" @ 0 io.nccl.recv
+        
+        "xinput" @ io.dump
+        "yout_g" @ io.dump
+    
+        
+        layer_forward
+
+        "xa" @ io.dump
+    }
 
     op.sync
+
 %end

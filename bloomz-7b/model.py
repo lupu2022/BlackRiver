@@ -646,6 +646,9 @@ class BloomModel(nn.Module):
             past_key_values_length=past_key_values_length,
         )
 
+        self.alibi = alibi;
+        self.causal_mask = causal_mask;
+
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
@@ -905,11 +908,13 @@ def test_model():
     mask = tks["attention_mask"];
     labels = torch.masked_fill(labels, mask == 0, -100);
     x = model(**tks, output_attentions = False, output_hidden_states = True, labels = labels );
+    xinput = x[3][29]
+    xinput.detach_();
 
+    ## get output's grad
     x = x[3][30]
     x = x.detach_();
     x.requires_grad = True;
-
     ln_f = model.transformer.ln_f;
     ln_f.training = True;
     lm_head = model.lm_head;
@@ -924,6 +929,17 @@ def test_model():
     labels = labels.view(-1);
     loss = fct(x1, labels);
     loss.backward();
-    dx = x.grad;
+    dout = x.grad;
 
-    return dx, ln_f
+    dout.detach_();
+    alibi = model.transformer.alibi;
+    mask = model.transformer.causal_mask;
+    model = model.transformer.h[29];
+
+    ## testing transformer's one block
+    xinput.requires_grad = True;
+    model = model.eval();
+    out = model.forward(xinput, alibi = alibi, attention_mask=mask);
+
+    return xinput, out, dout, model
+
