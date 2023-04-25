@@ -151,10 +151,10 @@ ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b
         auto b = b_->cuda_float();
         auto y = y_->cuda_float();
 
-        size_t batch = self->shape().vec()[0];
-        size_t tokens = self->shape().vec()[1];
-        size_t inSize = self->shape().vec()[2];
-        size_t outSize = w_->shape().vec()[0];
+        size_t batch = self->shape()[0];
+        size_t tokens = self->shape()[1];
+        size_t inSize = self->shape()[2];
+        size_t outSize = w_->shape()[0];
 
         int m = outSize;
         int n = batch * tokens;
@@ -236,8 +236,8 @@ template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
     if ( DT == DataType::Float ) {
         auto x = this;
-        size_t batch = self->shape().vec()[0] * self->shape().vec()[1];
-        size_t hidden = self->shape().vec()[2];
+        size_t batch = self->shape()[0] * self->shape()[1];
+        size_t hidden = self->shape()[2];
 
         auto m = mean->cuda_float();
         auto v = var->cuda_float();
@@ -259,10 +259,10 @@ ComputingReturn  CUDATensor<DT>::op_transpos_0213(tensor_t self, tensor_t y) {
     if ( DT == DataType::Float ) {
         auto x = this;
 
-        int sz0 = self->shape().vec()[0];
-        int sz1 = self->shape().vec()[1];
-        int sz2 = self->shape().vec()[2];
-        int sz3 = self->shape().vec()[3];
+        int sz0 = self->shape()[0];
+        int sz1 = self->shape()[1];
+        int sz2 = self->shape()[2];
+        int sz3 = self->shape()[3];
 
         auto out = y->cuda_float();
 
@@ -369,7 +369,7 @@ ComputingReturn  CUDATensor<DT>::op_attn(tensor_t self, tensor_t value_, tensor_
         int batch = shape_[0];
         int heads = shape_[1];
         int tokens = shape_[2];
-        int hhidden = value_->shape().vec()[3];
+        int hhidden = value_->shape()[3];
 
         int m = hhidden;
         int n = tokens;
@@ -414,11 +414,11 @@ ComputingReturn  CUDATensor<DT>::op_gelu(tensor_t self, tensor_t out) {
 template<DataType DT>
 ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  tensor_t lm_head, tensor_t output) {
     if ( DT == DataType::Float ) {
-        int batch = self->shape().vec()[0];
-        int tokens = self->shape().vec()[1];
-        int hidden_size = self->shape().vec()[2];
+        int batch = self->shape()[0];
+        int tokens = self->shape()[1];
+        int hidden_size = self->shape()[2];
 
-        int vocab_size = lm_head->shape().vec()[0];
+        int vocab_size = lm_head->shape()[0];
 
         int* mask = (int *)mask_->cpu_int()->data();
         for (int b = 0;  b < batch; b++) {
@@ -603,11 +603,11 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 
     if ( DT == DataType::Float ) {
 
-        const int batch = self->shape().vec()[0];
-        const int tokens = self->shape().vec()[1];
-        const int hidden_size = self->shape().vec()[2];
+        const int batch = self->shape()[0];
+        const int tokens = self->shape()[1];
+        const int hidden_size = self->shape()[2];
 
-        const int vocab_size = lm_head->shape().vec()[0];
+        const int vocab_size = lm_head->shape()[0];
 
         const int group_max_size = br::ComputingContext::workspace_size / ( vocab_size * sizeof(float) );
         br_assert(  (int)all_logits->items() / vocab_size > 2 * group_max_size, " logits workspace is not enough !");
@@ -743,15 +743,100 @@ ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t sc
         float* dbias = (float *)dbias_->cuda_float()->data();
         float* din = (float *)din_->cuda_float()->data();
 
-        size_t batch = self->shape().vec()[0];
-        size_t tokens = self->shape().vec()[1];
-        int hidden = self->shape().vec()[2];
+        size_t batch = self->shape()[0];
+        size_t tokens = self->shape()[1];
+        int hidden = self->shape()[2];
         int num = batch * tokens;
 
         kernels::launch_ln_bw_float(dscale, dbias, din, dout,
                                     nullptr, y, scale, bias,
                                     var, nullptr,
                                     num, hidden, eps, streams);
+
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) {
+    if ( DT == DataType::Float ) {
+        size_t batch = self->shape()[0];
+        size_t tokens = self->shape()[1];
+        size_t outSize = self->shape()[2];
+        size_t inSize = x->shape()[2];
+
+        // do reduce follow batch
+        {
+            cudnnReduceTensorDescriptor_t reduceDesc;
+
+            CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
+            CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
+                                                        CUDNN_REDUCE_TENSOR_ADD, CUDNN_DATA_FLOAT,
+                                                        CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_NO_INDICES, CUDNN_32BIT_INDICES) );
+
+            float alpha = 1.0;
+            float beta = 0.0;
+            auto  adesc = create_cudnn_td_with({batch * tokens, outSize, 1, 1});
+            auto  cdesc = create_cudnn_td_with({1,              outSize, 1, 1});
+            void* a = data();
+            void* c = bias_g->cuda_float()->data();
+
+            CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
+                                reduceDesc,
+                                nullptr, 0,
+                                br::ComputingContext::cuda_workspace, br::ComputingContext::workspace_size,
+                                &alpha, adesc, a, &beta, cdesc, c) );
+
+            CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
+        }
+
+        // do twice gemm
+        {
+            int m = inSize;
+            int n = outSize;
+            int k = batch * tokens;
+
+            float* A = (float *)x->cuda_float()->data();
+            float* B = (float *)data();
+            float* C = (float *)weight_g->cuda_float()->data();
+
+            float alpha = 1.0;
+            float beta = 0.0;
+
+            kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_T,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, n, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
+        }
+
+        {
+            int m = inSize;
+            int n = batch * tokens;
+            int k = outSize;
+
+            float* A = (float *)weight->cuda_float()->data();
+            float* B = (float *)data();
+            float* C = (float *)x_g->cuda_float()->data();
+
+            float alpha = 1.0;
+            float beta = 0.0;
+
+            kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_N,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, k, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
+        }
 
 
         return OP_OK;

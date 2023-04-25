@@ -134,6 +134,12 @@ ComputingReturn TensorType::op_layernorm_backward(tensor_t self, tensor_t scale,
     op_check(ret, "layernorm_backward");
 }
 
+ComputingReturn TensorType::op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_linear_backward(self, x, weight, bias, x_g, weight_g, bias_g);
+    op_check(ret, "linear_backward");
+}
+
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");
     auto ret = impl()->io_load(self, fileName);

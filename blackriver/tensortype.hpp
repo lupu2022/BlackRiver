@@ -82,12 +82,15 @@ public:
     const size_t dim() const {
         return dims_.size();
     }
+    const size_t operator[](int i) const {
+        return dims_[i];
+    }
     bool operator == (const ShapeType& other) const {
         if ( other.dim() != dim() ) {
             return false;
         }
         for (size_t i = 0; i < dim(); i++) {
-            if ( other.vec()[i] != dims_[i] ) {
+            if ( other[i] != dims_[i] ) {
                 return false;
             }
         }
@@ -98,7 +101,7 @@ public:
             return true;
         }
         for (size_t i = 0; i < dim(); i++) {
-            if ( other.vec()[i] != dims_[i] ) {
+            if ( other[i] != dims_[i] ) {
                 return true;
             }
         }
@@ -193,8 +196,8 @@ public:
         std::stringstream ss;
         ss << device_name() << ":" <<  DataType_name( dtype() ) << ":" << marker_ ;
         ss << ":[";
-        for (size_t i = 0; i < shape_.vec().size(); i++) {
-            ss << shape_.vec()[i];
+        for (size_t i = 0; i < shape_.dim(); i++) {
+            ss << shape_[i];
             if (i != shape_.dim() - 1) {
                 ss << " ";
             }
@@ -270,6 +273,7 @@ public:
     ComputingReturn op_last_logits(tensor_t self, tensor_t mask,  tensor_t lm_head, tensor_t output) override;
     std::variant<ComputingReturn, float> op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) override;
     ComputingReturn op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t var, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din, float eps) override;
+    ComputingReturn op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) override;
 
     ComputingReturn io_load(tensor_t self, const char* fileName) override;
     ComputingReturn io_save(tensor_t self, const char* fileName) override;
