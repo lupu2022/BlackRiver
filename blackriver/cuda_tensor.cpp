@@ -844,6 +844,22 @@ ComputingReturn CUDATensor<DT>::op_linear_backward(tensor_t self, tensor_t x, te
     return OP_TODO_ERROR;
 }
 
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_gelu_backward(tensor_t self, tensor_t x_, tensor_t x_g_) {
+    if ( DT == DataType::Float ) {
+        auto stream = ComputingContext::cuda_stream;
+        float* out_g = (float *)data();
+        float* x = (float *)x_->cuda_float()->data();
+        float* x_g = (float *)x_g_->cuda_float()->data();
+
+        kernels::gelu_backward(out_g, x, x_g, self->items(), stream);
+
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CUDATensor<DataType::Float>* tensor = new CUDATensor<DataType::Float>(shape);

@@ -217,6 +217,15 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(LinearBackward)
     };
+    struct GeluBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t x_g = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_gelu_backward(self, x, x_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(GeluBackward)
+    };
 
 }
 
@@ -312,6 +321,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.loss_backward", nn::LossBackward::creator);
     env.insert_native_word("op.layernorm_backward", nn::LayernormBackward::creator);
     env.insert_native_word("op.linear_backward", nn::LinearBackward::creator);
+    env.insert_native_word("op.gelu_backward", nn::GeluBackward::creator);
 }
 
 }// end of namespace br

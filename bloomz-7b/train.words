@@ -77,15 +77,17 @@
 
     ;; following memory is shadered 
     
-    ;; x4 
+    ;; x4a and x4b 
     {
         dup
 
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * + dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
+        
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4" !
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
     }
     
-
     ;; output logits 
     {
         dup
@@ -158,21 +160,37 @@
         ;; xb passed post layernorm
         ;; 4h dense & glue
         
-        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4" @ op.linear
-        "x4" @ "x4" @ op.gelu
+        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4a" @ op.linear
+        "x4a" @ "x4b" @ op.gelu
 
         ;; 4h dense
-        "x4" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xb" @ op.linear
+        "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xc" @ op.linear
 
         ;; residual 
-        "xa" @ "xb" @ "xa" @ op.add
+        "xa" @ "xc" @ "xa" @ op.add
     }
 
 %end
 
-
 %def layer_backward
+    ;
+    ;   MLP backward
+    ;
+    {
+        "yout_g" @ "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @  "x4b" @ "dense_4h_to_h.weight_g" @ "dense_4h_to_h.bias_g" @ op.linear_backward   
+ 
+        "x4b" @ "x4a" @ "x4a" @ op.gelu_backward
+        
+        "x4a" @ "xb" @  "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "xb" @  "dense_h_to_4h.weight_g" @ "dense_h_to_4h.bias_g" @ op.linear_backward  
+       
 
+        "dense_4h_to_h.weight_g" @ io.dump 
+        "dense_4h_to_h.bias_g" @ io.dump 
+
+        "dense_h_to_4h.weight_g" @ io.dump 
+        "dense_h_to_4h.bias_g" @ io.dump 
+    }
+    
 %end
 
 %def one_layer
@@ -287,13 +305,8 @@
         "xinput" @ "xinput_" @ op.copy
         "yout_g" @ 0 io.nccl.recv
         
-        "xinput" @ io.dump
-        "yout_g" @ io.dump
-    
-        
         layer_forward
-
-        "xa" @ io.dump
+        layer_backward
     }
 
     op.sync

@@ -140,6 +140,12 @@ ComputingReturn TensorType::op_linear_backward(tensor_t self, tensor_t x, tensor
     op_check(ret, "linear_backward");
 }
 
+ComputingReturn TensorType::op_gelu_backward(tensor_t self, tensor_t x, tensor_t x_g) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_gelu_backward(self, x, x_g);
+    op_check(ret, "gelu_backward");
+}
+
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");
     auto ret = impl()->io_load(self, fileName);

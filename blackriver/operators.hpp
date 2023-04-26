@@ -94,6 +94,9 @@ struct TransformerComputing {
     virtual ComputingReturn op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_gelu_backward(tensor_t self, tensor_t x, tensor_t x_g) {
+        return OP_TODO_ERROR;
+    }
 };
 
 

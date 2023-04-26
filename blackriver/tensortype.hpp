@@ -274,6 +274,7 @@ public:
     std::variant<ComputingReturn, float> op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) override;
     ComputingReturn op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t var, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din, float eps) override;
     ComputingReturn op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) override;
+    ComputingReturn op_gelu_backward(tensor_t self, tensor_t x, tensor_t x_g) override;
 
     ComputingReturn io_load(tensor_t self, const char* fileName) override;
     ComputingReturn io_save(tensor_t self, const char* fileName) override;
