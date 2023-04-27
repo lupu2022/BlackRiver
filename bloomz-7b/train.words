@@ -47,7 +47,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
     
-    ;; xa, xb, xc, xd
+    ;; xa, xb, xc, xd, xe
     {
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
@@ -72,6 +72,12 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+    
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xe" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ye" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "ze" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
     }
   
 
@@ -81,7 +87,7 @@
     {
         dup
 
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * + dup
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * + dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
         
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
@@ -92,7 +98,7 @@
     {
         dup
 
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
        
         dup
         "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
@@ -104,15 +110,10 @@
     
     ;; larget memroy
     {
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
    
-    ;; active tensor for backward
-    {
-         
-    }
-
 %end
 
 %def layer_forward
@@ -144,11 +145,11 @@
 
         ;; do attention and transpose back
         "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
-        "zc" @ "ya" @ op.transpos_0213
+        "zc" @ "ye" @ op.transpos_0213
     }
 
     ;; do dense & residual
-    "xa" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
+    "xe" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
     "xb" @ "xinput" @ "xa" @ op.add
 
     ;; post layernorm
@@ -173,24 +174,30 @@
 %end
 
 %def layer_backward
-    ;
-    ;   MLP backward
-    ;
+    
+    ;;   MLP backward
     {
         "yout_g" @ "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @  "x4b" @ "dense_4h_to_h.weight_g" @ "dense_4h_to_h.bias_g" @ op.linear_backward   
  
         "x4b" @ "x4a" @ "x4a" @ op.gelu_backward
         
-        "x4a" @ "xb" @  "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "xb" @  "dense_h_to_4h.weight_g" @ "dense_h_to_4h.bias_g" @ op.linear_backward  
-       
-
-        "dense_4h_to_h.weight_g" @ io.dump 
-        "dense_4h_to_h.bias_g" @ io.dump 
-
-        "dense_h_to_4h.weight_g" @ io.dump 
-        "dense_h_to_4h.bias_g" @ io.dump 
+        "x4a" @ "xb" @  "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "xa" @  "dense_h_to_4h.weight_g" @ "dense_h_to_4h.bias_g" @ op.linear_backward  
     }
+   
+    ;;  post layernorm backward
+   
+    "xa" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xd" @  "xb" @ "post_attention_layernorm.weight_g" @ "post_attention_layernorm.bias_g" @ "xc" @ "LN_EPS" @  op.layernorm_backward
+    "xc" @ "yout_g" @ "xc" @ op.add
+
+    ;; dense backward
     
+    "xc" @ "xe" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
+
+    "dense.weight_g" @ io.dump 
+    "dense.bias_g" @ io.dump 
+   
+    
+
 %end
 
 %def one_layer
