@@ -97,6 +97,10 @@ struct TransformerComputing {
     virtual ComputingReturn op_gelu_backward(tensor_t self, tensor_t x, tensor_t x_g) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
+        return OP_TODO_ERROR;
+    }
+
 };
 
 

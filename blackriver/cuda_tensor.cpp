@@ -860,6 +860,38 @@ ComputingReturn CUDATensor<DT>::op_gelu_backward(tensor_t self, tensor_t x_, ten
     return OP_TODO_ERROR;
 }
 
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
+    if ( DT == DataType::Float ) {
+        float alpha = 1.0;
+        float beta = 0.0;
+
+        auto shape_ = self->shape().vec();
+        int batch = shape_[0];
+        int heads = shape_[1];
+        int tokens = shape_[2];
+        int hhidden = shape_[3];
+
+        int HT = hhidden * tokens ;
+        int TT = tokens * tokens;
+        for (int i = 0; i < batch * heads; i++) {
+            // computing attn_g
+            {
+
+            }
+
+            // computing value_g
+            {
+
+            }
+        }
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CUDATensor<DataType::Float>* tensor = new CUDATensor<DataType::Float>(shape);

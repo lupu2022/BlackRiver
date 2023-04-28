@@ -146,6 +146,13 @@ ComputingReturn TensorType::op_gelu_backward(tensor_t self, tensor_t x, tensor_t
     op_check(ret, "gelu_backward");
 }
 
+ComputingReturn TensorType::op_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_attn_backward(self, attn, v, attn_g, v_g);
+    op_check(ret, "gelu_attn_backward");
+}
+
+
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");
     auto ret = impl()->io_load(self, fileName);

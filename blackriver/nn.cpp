@@ -226,6 +226,17 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(GeluBackward)
     };
+    struct AttnBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t v_g = stack.pop_tensor();
+            tensor_t attn_g = stack.pop_tensor();
+            tensor_t v = stack.pop_tensor();
+            tensor_t attn = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_attn_backward(self, attn, v, attn_g, v_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(AttnBackward)
+    };
 
 }
 
@@ -322,6 +333,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.layernorm_backward", nn::LayernormBackward::creator);
     env.insert_native_word("op.linear_backward", nn::LinearBackward::creator);
     env.insert_native_word("op.gelu_backward", nn::GeluBackward::creator);
+    env.insert_native_word("op.attn_backward", nn::AttnBackward::creator);
 }
 
 }// end of namespace br

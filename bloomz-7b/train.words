@@ -187,7 +187,9 @@
     ;;  post layernorm backward
    
     "xa" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xd" @  "xb" @ "post_attention_layernorm.weight_g" @ "post_attention_layernorm.bias_g" @ "xc" @ "LN_EPS" @  op.layernorm_backward
+    
     "xc" @ "yout_g" @ "xc" @ op.add
+    "yout_g" @ "xc" @ op.copy
 
     ;; dense backward
     
@@ -195,8 +197,13 @@
 
     "dense.weight_g" @ io.dump 
     "dense.bias_g" @ io.dump 
-   
     
+    ;; attention backward 
+    {
+        "ya" @ "zb" @ op.transpos_0213
+
+        
+    }
 
 %end
 
