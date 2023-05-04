@@ -38,6 +38,21 @@
         "HEADS_NUM" @ $tokens @ * +  
     }
 
+    ;;  keep var in layer_norm, used for backward
+    {
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "input_ln_var" !
+        "HIDDEN_SIZE" @  + 
+ 
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "post_ln_var" !
+        "HIDDEN_SIZE" @  +
+    
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "ln_mean" !
+        "HIDDEN_SIZE" @  +
+    }
+
     ;; xmask in GPU, xmask_ in CPU
     {
         dup
@@ -47,7 +62,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
     
-    ;; xa, xb, xc, xd, xe
+    ;; generals memory ( xa, xb, xc, xd ) and others 
     {
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
@@ -73,10 +88,9 @@
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
     
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xe" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ye" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "ze" !
+        dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_out" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
     }
   
@@ -118,23 +132,23 @@
 
 %def layer_forward
     ;; layernorm for input
-    "xinput" @ "xa" @ "xb" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
+    "xinput" @ "ln_mean" @ "input_ln_var" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
    
     ;; get kqv & transpose
     {
-        "xd" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
-        "xd" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
-        "xd" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
+        "xd" @ "query.weight" @ "query.bias" @ "xc" @ op.linear  
+        "xd" @ "key.weight" @ "key.bias" @ "xa" @ op.linear  
+        "xd" @ "value.weight" @ "value.bias" @ "xb" @ op.linear  
 
-        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
-        "yb" @ "za" @ op.transpos_0213          ;; key -> za
-        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
+        "yc" @ "zc" @ op.transpos_0213          ;; query -> zc
+        "ya" @ "za" @ op.transpos_0213          ;; key -> za
+        "yb" @ "zb" @ op.transpos_0213          ;; value -> zb
     }
 
     ;; attention
     {
         ;; get query@key
-        "zd" @  "za" @  "xll" @ op.querykey 
+        "zc" @  "za" @  "xll" @ op.querykey 
 
         ;; added alibi and apply xmask
         "xll" @ "alibi" @ "xll" @ op.add
@@ -145,15 +159,15 @@
 
         ;; do attention and transpose back
         "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
-        "zc" @ "ye" @ op.transpos_0213
+        "zc" @ "yattn_out" @ op.transpos_0213
     }
 
     ;; do dense & residual
-    "xe" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
+    "xattn_out" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
     "xb" @ "xinput" @ "xa" @ op.add
 
     ;; post layernorm
-    "xa" @ "xc" @ "xd" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
+    "xa" @ "ln_mean" @ "post_ln_var" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
 
     ;; MLP
     {
@@ -186,14 +200,14 @@
    
     ;;  post layernorm backward
    
-    "xa" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xd" @  "xb" @ "post_attention_layernorm.weight_g" @ "post_attention_layernorm.bias_g" @ "xc" @ "LN_EPS" @  op.layernorm_backward
+    "xa" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "post_ln_var" @  "xb" @ "post_attention_layernorm.weight_g" @ "post_attention_layernorm.bias_g" @ "xc" @ "LN_EPS" @  op.layernorm_backward
     
     "xc" @ "yout_g" @ "xc" @ op.add
     "yout_g" @ "xc" @ op.copy
 
     ;; dense backward
     
-    "xc" @ "xe" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
+    "xc" @ "xattn_out" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
 
     "dense.weight_g" @ io.dump 
     "dense.bias_g" @ io.dump 
@@ -324,5 +338,5 @@
     }
 
     op.sync
-
+    ?
 %end

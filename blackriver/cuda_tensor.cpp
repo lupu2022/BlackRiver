@@ -461,39 +461,6 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
     return OP_TODO_ERROR;
 }
 
-/*
-// A working reduce API caller
-//
-// select max value of softmax
-cudnnReduceTensorDescriptor_t reduceDesc;
-
-CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
-CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
-                                            CUDNN_REDUCE_TENSOR_MAX, CUDNN_DATA_FLOAT,
-                                            CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_FLATTENED_INDICES, CUDNN_32BIT_INDICES) );
-
-int split = n + 1024;
-split = split - split % 1024;
-float* c = (float *) br::ComputingContext::cuda_workspace;
-int* ind = (int *)(c + split);
-float* w = c + split * 2;
-size_t isize = split * sizeof(int);
-size_t wsize = br::ComputingContext::workspace_size - split * 2 * sizeof(float);
-
-auto  cdesc = create_cudnn_td_with({(size_t)n, 1, 1, 1});
-CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
-                                reduceDesc,
-                                ind, isize , w, wsize,
-                                &alpha, xdesc, dst, &beta, cdesc, c) );
-
-CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
-
-std::vector<int> ind_;
-ind_.resize(split, 0);
-CUDA_CHECK(cudaMemcpyAsync(ind_.data(), ind, ind_.size() * sizeof(int), cudaMemcpyDeviceToHost, stream));
-CUDA_CHECK(cudaStreamSynchronize(stream));
-*/
-
 template<DataType DT>
 std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) {
     struct _ {
@@ -871,22 +838,51 @@ ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, t
         int batch = shape_[0];
         int heads = shape_[1];
         int tokens = shape_[2];
-        int hhidden = shape_[3];
+        int hidden = shape_[3];
 
-        int HT = hhidden * tokens ;
+        int HT = hidden * tokens ;
         int TT = tokens * tokens;
         for (int i = 0; i < batch * heads; i++) {
-            // computing attn_g
-            {
-
-            }
-
             // computing value_g
             {
+                float* A = (float *)data() + i * HT;
+                float* B = (float *)attn->cuda_float()->data() + i * TT;
+                float* C = (float *)v_g->cuda_float()->data() + i * HT;
 
+                int m = hidden;
+                int n = tokens;
+                int k = tokens;
+
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_T,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, n, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
+            }
+
+            // computing attn_g
+            {
+                float* A = (float *)v->cuda_float()->data() + i * HT;
+                float* B = (float *)data() + i * HT;
+                float* C = (float *)attn_g->cuda_float()->data() + i * TT;
+
+                int m = tokens;
+                int n = tokens;
+                int k = hidden;
+
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_T, CUBLAS_OP_N,
+                    m, n, k,
+                    &alpha, A, k,
+                    B, k, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
             }
         }
-
         return OP_OK;
     }
     return OP_TODO_ERROR;
