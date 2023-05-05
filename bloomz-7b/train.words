@@ -62,7 +62,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
     
-    ;; xa, xb, xc, xd, xattn_in, xattn_out
+    ;; xa, xb, xc, xd
     {
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
@@ -87,8 +87,11 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
- 
-        dup
+    }
+
+    ;; xattn_in, xattn_out, x4a, x4b, xll
+    {
+        dup dup 
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_in" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
    
@@ -96,33 +99,25 @@
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_out" !
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-    }
-  
-
-    ;; following memory is shadered 
     
-    ;; x4a and x4b 
-    {
-        dup dup
-
+        dup 
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
-        
+       
+        dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
     
-    ;; output logits 
+    ;; output logits , shared with attn_in
     {
-        dup dup
+        dup
         "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
         "VOCAB_SIZE" @  "HIDDEN_SIZE" @ * +
         
         "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "all_logits" !
-    }
-    
-    ;; larget memroy
-    {
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
    
 %end
