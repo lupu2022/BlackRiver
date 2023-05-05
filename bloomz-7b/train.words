@@ -34,22 +34,22 @@
         dup
         "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi" ! 
         "_alibi_" @ 0   1 "HEADS_NUM" @ 1 $tokens @  4 op.view   "alibi_" ! 
-    
+
         "HEADS_NUM" @ $tokens @ * +  
     }
 
     ;;  keep var in layer_norm, used for backward
     {
         dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "input_ln_var" !
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "input_ln_var" !
         "HIDDEN_SIZE" @  + 
  
         dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "post_ln_var" !
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "post_ln_var" !
         "HIDDEN_SIZE" @  +
     
         dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view   "ln_mean" !
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "ln_mean" !
         "HIDDEN_SIZE" @  +
     }
 
@@ -62,7 +62,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
     
-    ;; generals memory ( xa, xb, xc, xd ) and others 
+    ;; xa, xb, xc, xd, xattn_in, xattn_out
     {
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
@@ -87,7 +87,11 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-    
+ 
+        dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_in" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+   
         dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_out" !
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
@@ -99,32 +103,25 @@
     
     ;; x4a and x4b 
     {
-        dup
+        dup dup
 
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * + dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
-        
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4b" !
     }
     
     ;; output logits 
     {
-        dup
-
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
-       
-        dup
+        dup dup
         "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
-       
         "VOCAB_SIZE" @  "HIDDEN_SIZE" @ * +
-    
+        
         "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "all_logits" !
     }
     
     ;; larget memroy
     {
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 5 * * * +
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
    
@@ -132,23 +129,23 @@
 
 %def layer_forward
     ;; layernorm for input
-    "xinput" @ "ln_mean" @ "input_ln_var" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xd" @  "LN_EPS" @  op.layernorm 
+    "xinput" @ "ln_mean" @ "input_ln_var" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xattn_in" @  "LN_EPS" @  op.layernorm 
    
     ;; get kqv & transpose
     {
-        "xd" @ "query.weight" @ "query.bias" @ "xc" @ op.linear  
-        "xd" @ "key.weight" @ "key.bias" @ "xa" @ op.linear  
-        "xd" @ "value.weight" @ "value.bias" @ "xb" @ op.linear  
+        "xattn_in" @ "query.weight" @ "query.bias" @ "xa" @ op.linear  
+        "xattn_in" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
+        "xattn_in" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
 
-        "yc" @ "zc" @ op.transpos_0213          ;; query -> zc
-        "ya" @ "za" @ op.transpos_0213          ;; key -> za
-        "yb" @ "zb" @ op.transpos_0213          ;; value -> zb
+        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
+        "yb" @ "za" @ op.transpos_0213          ;; key -> za
+        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
     }
 
     ;; attention
     {
         ;; get query@key
-        "zc" @  "za" @  "xll" @ op.querykey 
+        "zd" @  "za" @  "xll" @ op.querykey 
 
         ;; added alibi and apply xmask
         "xll" @ "alibi" @ "xll" @ op.add
@@ -209,6 +206,8 @@
     
     "xc" @ "xattn_out" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
 
+    "post_attention_layernorm.weight_g" @ io.dump 
+    "post_attention_layernorm.bias_g" @ io.dump 
     "dense.weight_g" @ io.dump 
     "dense.bias_g" @ io.dump 
     
@@ -282,13 +281,13 @@
 
         "xa" @ 1 io.nccl.recv 
         
-        "xa" @ "xb" @ "xc" @ "ln_f.weight" @ "ln_f.bias" @ "xd" @ "LN_EPS" @ op.layernorm
+        "xa" @ "ln_mean" @ "post_ln_var" @ "ln_f.weight" @ "ln_f.bias" @ "xb" @ "LN_EPS" @ op.layernorm
         
-        "xd" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
+        "xb" @  "ids_" @  "mask_" @  "lm_head.weight" @  "all_logits" @  "xa" @  "lm_head.weight_g_" @ op.loss_backward
         
-        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "xc" @ "xd" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "xb" @ "LN_EPS" @ op.layernorm_backward
+        "xa" @  "ln_f.weight" @ "ln_f.bias" @  "post_ln_var" @ "xb" @  "ln_f.weight_g" @ "ln_f.bias_g" @  "xc" @ "LN_EPS" @ op.layernorm_backward
     
-        "xb" @ 1 io.nccl.send
+        "xc" @ 1 io.nccl.send
     }
     op.sync
 
@@ -338,5 +337,5 @@
     }
 
     op.sync
-    ?
+
 %end
