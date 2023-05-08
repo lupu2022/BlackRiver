@@ -62,7 +62,7 @@
         $batch @ $tokens @ $tokens @ * * +
     }
     
-    ;; xa, xb, xc, xd
+    ;; xa, xb, xc
     {
         dup dup dup
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
@@ -81,15 +81,9 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yc" !
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zc" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-        
-        dup dup dup
-        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xd" !
-        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yd" !
-        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zd" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
     }
 
-    ;; xattn_in, xattn_out, x4a, x4b, xll
+    ;; xattn_in, xattn_out, kqv,  x4a, x4b, xll
     {
         dup dup 
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_in" !
@@ -99,7 +93,21 @@
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_out" !
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-    
+        
+        
+        dup 
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zquery" ! 
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+
+        dup 
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zkey"  !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+        
+        dup 
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zvalue" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
         dup 
         "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE_x4" @ 3 op.view "x4a" !
         $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
@@ -132,15 +140,15 @@
         "xattn_in" @ "key.weight" @ "key.bias" @ "xb" @ op.linear  
         "xattn_in" @ "value.weight" @ "value.bias" @ "xc" @ op.linear  
 
-        "ya" @ "zd" @ op.transpos_0213          ;; query -> zd
-        "yb" @ "za" @ op.transpos_0213          ;; key -> za
-        "yc" @ "zb" @ op.transpos_0213          ;; value -> zb
+        "ya" @ "zquery" @ op.transpos_0213          
+        "yb" @ "zkey" @ op.transpos_0213          
+        "yc" @ "zvalue" @ op.transpos_0213  
     }
 
     ;; attention
     {
         ;; get query@key
-        "zd" @  "za" @  "xll" @ op.querykey 
+        "zquery" @  "zkey" @  "xll" @ op.querykey 
 
         ;; added alibi and apply xmask
         "xll" @ "alibi" @ "xll" @ op.add
@@ -150,7 +158,7 @@
         "xll" @ "xll" @ op.softmax
 
         ;; do attention and transpose back
-        "xll" @ "zb" @  "zc" @ op.attn          ;; attn -> zc
+        "xll" @ "zvalue" @  "zc" @ op.attn          ;; attn -> zc
         "zc" @ "yattn_out" @ op.transpos_0213
     }
 
