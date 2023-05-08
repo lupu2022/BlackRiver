@@ -78,7 +78,8 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) override;
     ComputingReturn op_gelu_backward(tensor_t self, tensor_t x, tensor_t x_g) override;
     ComputingReturn op_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) override;
-
+    ComputingReturn op_softmax_backward(tensor_t self, tensor_t out, tensor_t x_g) override;
+    ComputingReturn op_softmax_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) override;
 
 private:
     void*                       mem_;

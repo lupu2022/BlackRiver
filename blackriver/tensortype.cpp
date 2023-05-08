@@ -152,6 +152,23 @@ ComputingReturn TensorType::op_attn_backward(tensor_t self, tensor_t attn, tenso
     op_check(ret, "gelu_attn_backward");
 }
 
+ComputingReturn TensorType::op_softmax_backward(tensor_t self, tensor_t out, tensor_t x_g) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_softmax_backward(self, out, x_g);
+    op_check(ret, "gelu_softmax_backward");
+}
+
+ComputingReturn TensorType::op_softmax_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_softmax_attn_backward(self, attn, v, attn_g, v_g);
+    op_check(ret, "gelu_softmax_attn_backward");
+}
+
+ComputingReturn TensorType::op_qk_backward(tensor_t self, tensor_t q, tensor_t k, tensor_t q_g, tensor_t k_g) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_qk_backward(self, q, k, q_g, k_g);
+    op_check(ret, "gelu_qk_backward");
+}
 
 ComputingReturn TensorType::io_load(tensor_t self, const char* fileName) {
     br_assert(this == self.get() , "can't be here!");

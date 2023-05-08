@@ -94,11 +94,9 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
         
-        
         dup 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zquery" ! 
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
-
 
         dup 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zkey"  !
@@ -209,18 +207,22 @@
     
     "xc" @ "xattn_out" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
 
+   
+    ;; attention backward 
+    {
+        "ya" @ "zb" @ op.transpos_0213
+        
+        ;; "zb" @ "xll" @ "zvalue" @ "xll" @ "za" @ op.attn_backward   
+        ;; "xll" @ "xll" @ "xll" @ op.softmax_backward
+        
+        "zb" @ "xll" @ "zvalue" @ "xll" @ "za" @ op.softmax_attn_backward   
+    }
+
     "post_attention_layernorm.weight_g" @ io.dump 
     "post_attention_layernorm.bias_g" @ io.dump 
     "dense.weight_g" @ io.dump 
     "dense.bias_g" @ io.dump 
-    
-    ;; attention backward 
-    {
-        "ya" @ "zb" @ op.transpos_0213
-
-        
-    }
-
+ 
 %end
 
 %def one_layer

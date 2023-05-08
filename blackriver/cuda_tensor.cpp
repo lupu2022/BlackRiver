@@ -827,7 +827,6 @@ ComputingReturn CUDATensor<DT>::op_gelu_backward(tensor_t self, tensor_t x_, ten
     return OP_TODO_ERROR;
 }
 
-
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
     if ( DT == DataType::Float ) {
@@ -887,6 +886,121 @@ ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, t
     }
     return OP_TODO_ERROR;
 }
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_softmax_backward(tensor_t self, tensor_t out, tensor_t x_g) {
+    if ( DT == DataType::Float ) {
+        float alpha = 1.0;
+        float beta = 0.0;
+
+        auto shape_ = self->shape().vec();
+
+        size_t batch = shape_[0];
+        size_t heads = shape_[1];
+        size_t tokens = shape_[2];
+
+        auto dydesc = create_cudnn_td_with({ batch * heads * tokens, tokens, 1, 1});
+        auto dxdesc = create_cudnn_td_with({ batch * heads * tokens, tokens, 1, 1});
+        auto ydesc = create_cudnn_td_with({ batch * heads * tokens, tokens, 1, 1});
+
+        float*  dy = (float *)data();
+        float*  dx = (float *)x_g->cuda_float()->data();
+        float*  y = (float *)out->cuda_float()->data();
+
+        CUDNN_CHECK( cudnnSoftmaxBackward( ComputingContext::cudnn_handle,
+                                          CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE,
+                                          &alpha, ydesc, y, dydesc, dy, &beta, dxdesc, dx) );
+
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_softmax_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) {
+    if ( DT == DataType::Float ) {
+        float alpha = 1.0;
+        float beta = 0.0;
+
+        auto shape_ = self->shape().vec();
+        int batch = shape_[0];
+        int heads = shape_[1];
+        int tokens = shape_[2];
+        int hidden = shape_[3];
+
+        int HT = hidden * tokens ;
+        int TT = tokens * tokens;
+
+        float* softmax_out = (float *)ComputingContext::cuda_workspace;
+        float* wp = softmax_out + TT;
+        size_t wp_size = ComputingContext::workspace_size - TT * sizeof(float);
+        for (int i = 0; i < batch * heads; i++) {
+            // computing value_g
+            {
+                float* A = (float *)data() + i * HT;
+                float* B = (float *)attn->cuda_float()->data() + i * TT;
+                float* C = (float *)v_g->cuda_float()->data() + i * HT;
+
+                int m = hidden;
+                int n = tokens;
+                int k = tokens;
+
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_T,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, n, &beta,
+                    C, m,
+                    wp, wp_size);
+            }
+
+            // copy softmax out to a temp place
+            {
+                auto stream = ComputingContext::cuda_stream;
+                float* src = (float *)attn->cuda_float()->data() + i * TT;
+                CUDA_CHECK(cudaMemcpyAsync(softmax_out, src, TT * sizeof(float), cudaMemcpyDeviceToDevice, stream));
+            }
+
+            // computing attn_g
+            {
+                float* A = (float *)v->cuda_float()->data() + i * HT;
+                float* B = (float *)data() + i * HT;
+                float* C = (float *)attn_g->cuda_float()->data() + i * TT;
+
+                int m = tokens;
+                int n = tokens;
+                int k = hidden;
+
+                 kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_T, CUBLAS_OP_N,
+                    m, n, k,
+                    &alpha, A, k,
+                    B, k, &beta,
+                    C, m,
+                    wp, wp_size);
+            }
+
+            // apply softmax backward
+            {
+                auto dydesc = create_cudnn_td_with({ (size_t)tokens, (size_t)tokens, 1, 1});
+                auto dxdesc = create_cudnn_td_with({ (size_t)tokens, (size_t)tokens, 1, 1});
+                auto  ydesc = create_cudnn_td_with({ (size_t)tokens, (size_t)tokens, 1, 1});
+
+                float*  dy = (float *)attn_g->cuda_float()->data() + i * TT;
+                float*  dx = dy;
+                float*  y = softmax_out;
+
+                CUDNN_CHECK( cudnnSoftmaxBackward( ComputingContext::cudnn_handle,
+                            CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE,
+                            &alpha, ydesc, y, dydesc, dy, &beta, dxdesc, dx) );
+            }
+        }
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);

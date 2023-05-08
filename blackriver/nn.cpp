@@ -237,6 +237,39 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(AttnBackward)
     };
+    struct SoftmaxBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t x_g = stack.pop_tensor();
+            tensor_t out = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_softmax_backward(self, out, x_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(SoftmaxBackward)
+    };
+    struct QueryKeyBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t k_g = stack.pop_tensor();
+            tensor_t q_g = stack.pop_tensor();
+            tensor_t k = stack.pop_tensor();
+            tensor_t q = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_qk_backward(self, q, k, q_g, k_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(QueryKeyBackward)
+    };
+
+    struct SoftmaxAttnBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t v_g = stack.pop_tensor();
+            tensor_t attn_g = stack.pop_tensor();
+            tensor_t v = stack.pop_tensor();
+            tensor_t attn = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_softmax_attn_backward(self, attn, v, attn_g, v_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(SoftmaxAttnBackward)
+    };
+
 
 }
 
@@ -334,6 +367,9 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.linear_backward", nn::LinearBackward::creator);
     env.insert_native_word("op.gelu_backward", nn::GeluBackward::creator);
     env.insert_native_word("op.attn_backward", nn::AttnBackward::creator);
+    env.insert_native_word("op.softmax_backward", nn::SoftmaxBackward::creator);
+    env.insert_native_word("op.softmax_attn_backward", nn::SoftmaxAttnBackward::creator);
+    env.insert_native_word("op.qk_backward", nn::QueryKeyBackward::creator);
 }
 
 }// end of namespace br
