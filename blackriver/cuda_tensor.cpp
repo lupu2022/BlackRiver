@@ -1001,6 +1001,66 @@ ComputingReturn CUDATensor<DT>::op_softmax_attn_backward(tensor_t self, tensor_t
     return OP_TODO_ERROR;
 }
 
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::
+op_qk_backward(tensor_t self, tensor_t query, tensor_t key, tensor_t query_g, tensor_t key_g) {
+    if ( DT == DataType::Float ) {
+        auto shape_ = query->shape().vec();
+
+        int batch = shape_[0];
+        int heads = shape_[1];
+        int tokens = shape_[2];
+        int hhidden = shape_[3];
+
+        int HT = hhidden * tokens ;
+        int TT = tokens * tokens;
+
+        float alpha = 1.0 / sqrt(hhidden);
+        float beta = 0.0;
+        for (int i = 0; i < batch * heads; i++) {
+            // computing query_g
+            {
+                int m = hhidden;
+                int n = tokens;
+                int k = tokens;
+
+                float* A = (float *)(key->cuda_float()->data()) + i * HT;
+                float* B = (float *)data() + i * TT;
+                float* C = (float *)(query_g->cuda_float()->data()) + i * TT;
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_N,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, k, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
+            }
+
+            // computing key_g
+            {
+                int m = hhidden;
+                int n = tokens;
+                int k = tokens;
+
+                float* A = (float *)(query->cuda_float()->data()) + i * HT;
+                float* B = (float *)data() + i * TT;
+                float* C = (float *)(key_g->cuda_float()->data()) + i * TT;
+                kernels::LtSgemm(ComputingContext::cublasLt_handle,
+                    CUBLAS_OP_N, CUBLAS_OP_T,
+                    m, n, k,
+                    &alpha, A, m,
+                    B, n, &beta,
+                    C, m,
+                    ComputingContext::cuda_workspace,
+                    ComputingContext::workspace_size);
+
+            }
+        }
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
 
 tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);

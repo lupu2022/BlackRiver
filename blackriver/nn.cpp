@@ -246,18 +246,6 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(SoftmaxBackward)
     };
-    struct QueryKeyBackward : public NativeWord {
-        void run(Stack& stack) override {
-            tensor_t k_g = stack.pop_tensor();
-            tensor_t q_g = stack.pop_tensor();
-            tensor_t k = stack.pop_tensor();
-            tensor_t q = stack.pop_tensor();
-            tensor_t self = stack.pop_tensor();
-            self->op_qk_backward(self, q, k, q_g, k_g);
-        }
-        NWORD_CREATOR_DEFINE_LR(QueryKeyBackward)
-    };
-
     struct SoftmaxAttnBackward : public NativeWord {
         void run(Stack& stack) override {
             tensor_t v_g = stack.pop_tensor();
@@ -270,7 +258,17 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(SoftmaxAttnBackward)
     };
 
-
+    struct QueryKeyBackward : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t k_g = stack.pop_tensor();
+            tensor_t q_g = stack.pop_tensor();
+            tensor_t k = stack.pop_tensor();
+            tensor_t q = stack.pop_tensor();
+            tensor_t self = stack.pop_tensor();
+            self->op_qk_backward(self, q, k, q_g, k_g);
+        }
+        NWORD_CREATOR_DEFINE_LR(QueryKeyBackward)
+    };
 }
 
 namespace io {

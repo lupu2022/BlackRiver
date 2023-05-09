@@ -94,16 +94,19 @@
         "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
         
-        dup 
+        dup dup 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zquery" ! 
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yquery" ! 
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
 
-        dup 
+        dup dup 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zkey"  !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ykey" ! 
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
         
-        dup 
+        dup dup 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zvalue" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yvalue" ! 
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
 
         dup 
@@ -212,10 +215,19 @@
     {
         "ya" @ "zb" @ op.transpos_0213
         
-        ;; "zb" @ "xll" @ "zvalue" @ "xll" @ "za" @ op.attn_backward   
-        ;; "xll" @ "xll" @ "xll" @ op.softmax_backward
-        
         "zb" @ "xll" @ "zvalue" @ "xll" @ "za" @ op.softmax_attn_backward   
+        
+        "xll" @ "zquery" @ "zkey" @ "zb" @ "zc" @ op.qk_backward
+        
+        ; a -> dvalue
+        ; b -> dquery
+        ; c -> dkey
+
+        "za" @ "yvalue" @ op.transpos_0213
+        "zb" @ "yquery" @ op.transpos_0213
+        "zc" @ "ykey" @ op.transpos_0213
+    
+     
     }
 
     "post_attention_layernorm.weight_g" @ io.dump 
