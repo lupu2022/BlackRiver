@@ -214,9 +214,9 @@
     ;; attention backward 
     {
         "ya" @ "zb" @ op.transpos_0213
-        
+
         "zb" @ "xll" @ "zvalue" @ "xll" @ "za" @ op.softmax_attn_backward   
-        
+       
         "xll" @ "zquery" @ "zkey" @ "zb" @ "zc" @ op.qk_backward
         
         ; a -> dvalue
@@ -226,14 +226,25 @@
         "za" @ "yvalue" @ op.transpos_0213
         "zb" @ "yquery" @ op.transpos_0213
         "zc" @ "ykey" @ op.transpos_0213
-    
-     
-    }
+        
+        "xa" @ op.zero
 
-    "post_attention_layernorm.weight_g" @ io.dump 
-    "post_attention_layernorm.bias_g" @ io.dump 
-    "dense.weight_g" @ io.dump 
-    "dense.bias_g" @ io.dump 
+        "yquery" @ "xattn_in" @ "query.weight" @ "query.bias" @ "xinput" @ "query.weight_g" @ "query.bias_g" @ op.linear_backward
+        "xa" @ "xinput" @ "xa" @ op.add
+        
+        "ykey" @ "xattn_in" @ "key.weight" @ "key.bias" @ "xinput" @ "key.weight_g" @ "key.bias_g" @ op.linear_backward
+        "xa" @ "xinput" @ "xa" @ op.add
+        
+        "yvalue" @ "xattn_in" @ "value.weight" @ "value.bias" @ "xinput" @ "value.weight_g" @ "value.bias_g" @ op.linear_backward
+        "xa" @ "xinput" @ "xa" @ op.add
+    
+        "xa" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "input_ln_var" @ "xattn_in" @ "input_layernorm.weight_g" @ "input_layernorm.bias_g" @ "xb" @ "LN_EPS" @ op.layernorm_backward 
+    }
+    
+    "dense.weight_g" @ io.dump
+    "dense.bias_g" @ io.dump
+
+    "input_layernorm.weight_g" @ io.dump
  
 %end
 

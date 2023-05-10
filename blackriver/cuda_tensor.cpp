@@ -1026,7 +1026,7 @@ op_qk_backward(tensor_t self, tensor_t query, tensor_t key, tensor_t query_g, te
 
                 float* A = (float *)(key->cuda_float()->data()) + i * HT;
                 float* B = (float *)data() + i * TT;
-                float* C = (float *)(query_g->cuda_float()->data()) + i * TT;
+                float* C = (float *)(query_g->cuda_float()->data()) + i * HT;
                 kernels::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_N,
                     m, n, k,
@@ -1045,7 +1045,7 @@ op_qk_backward(tensor_t self, tensor_t query, tensor_t key, tensor_t query_g, te
 
                 float* A = (float *)(query->cuda_float()->data()) + i * HT;
                 float* B = (float *)data() + i * TT;
-                float* C = (float *)(key_g->cuda_float()->data()) + i * TT;
+                float* C = (float *)(key_g->cuda_float()->data()) + i * HT;
                 kernels::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_T,
                     m, n, k,
