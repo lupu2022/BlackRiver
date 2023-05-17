@@ -205,14 +205,10 @@
     ;;  post layernorm backward
    
     "xa" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "post_ln_var" @  "xb" @ "post_attention_layernorm.weight_g" @ "post_attention_layernorm.bias_g" @ "xc" @ "LN_EPS" @  op.layernorm_backward
-    
-    "xc" @ "yout_g" @ "xc" @ op.add
-    "yout_g" @ "xc" @ op.copy
+    "yout_g" @ "xc" @ "yout_g" @ op.add
 
     ;; dense backward
-    
-    "xc" @ "xattn_out" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
-
+    "yout_g" @ "xattn_out" @ "dense.weight" @ "dense.bias" @ "xa" @ "dense.weight_g" @ "dense.bias_g" @ op.linear_backward
    
     ;; attention backward 
     {
@@ -242,12 +238,13 @@
         "xa" @ "xb" @ "xa" @ op.add
 
         "xa" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "input_ln_var" @ "xattn_in" @ "input_layernorm.weight_g" @ "input_layernorm.bias_g" @ "xb" @ "LN_EPS" @ op.layernorm_backward 
-        
     }
-    "dense.weight_g" @ io.dump
-    "dense.bias_g" @ io.dump
+
+    "xb" @ "yout_g" @ "xa" @  op.add
 
     "input_layernorm.weight_g" @ io.dump
+    "input_layernorm.bias_g" @ io.dump
+    "xa" @ io.dump
 %end
 
 %def one_layer
